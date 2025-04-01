@@ -1,5 +1,6 @@
 package devtitans.antoshchuk.devfusion2025backend.util.mappers;
 
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
@@ -37,6 +38,14 @@ public class CompanyMapper {
                 company.getJobPosts().stream().map(JobPost::getId).toList()
         );
         return companyWithPostsResponseDTO;
+    }
+
+    public CompanyBaseResponseDTO companyToCompanyBaseResponseDTO(Company company) {
+        CompanyBaseResponseDTO companyBaseResponseDTO = modelMapper.map(company, CompanyBaseResponseDTO.class);
+//        CompanyBaseResponseDTO.setJobPostIds(
+//                company.getJobPosts().stream().map(JobPost::getId).toList()
+//        );
+        return companyBaseResponseDTO;
     }
 
 }

@@ -25,26 +25,27 @@ public class UserMapper {
     }
 
     public UserAccount convertUserRegDTOToUserAcc(UserRegisterRequestDTO userRegDTO) {
-        UserAccount userAcc = modelMapper.map(userRegDTO, UserAccount.class);
-        if(userRegDTO instanceof UserSeekerRegisterRequestDTO){
-            Seeker seeker = new Seeker();
-            seeker.setFirstName(((UserSeekerRegisterRequestDTO) userRegDTO).getFirstName());
-            seeker.setLastName(((UserSeekerRegisterRequestDTO) userRegDTO).getLastName());
-            seeker.setDateOfBirth(((UserSeekerRegisterRequestDTO) userRegDTO).getDateOfBirth());
-//            seeker.setUserAccount(userAcc);
-            seekerService.createSeeker(seeker);
-            userAcc.setSeeker(seeker);
-        }
-        else if(userRegDTO instanceof UserCompanyRegisterRequestDTO){
-            Company company = new Company();
-            company.setName(((UserCompanyRegisterRequestDTO) userRegDTO).getName());
-            company.setBusinessStreamName(((UserCompanyRegisterRequestDTO) userRegDTO).getBusinessStreamName());
-            company.setCompanyDescription(((UserCompanyRegisterRequestDTO) userRegDTO).getCompanyDescription());
-            company.setCompanyWebsiteUrl(((UserCompanyRegisterRequestDTO) userRegDTO).getCompanyWebsiteUrl());
-            company = companyService.createCompany(company);
-            userAcc.setCompany(company);
-            System.out.println("Comp user: " + userAcc);
-        }
-        return userAcc;
+//        UserAccount userAcc = modelMapper.map(userRegDTO, UserAccount.class);
+//        if(userRegDTO instanceof UserSeekerRegisterRequestDTO){
+//            Seeker seeker = new Seeker();
+//            seeker.setFirstName(((UserSeekerRegisterRequestDTO) userRegDTO).getFirstName());
+//            seeker.setLastName(((UserSeekerRegisterRequestDTO) userRegDTO).getLastName());
+//            seeker.setDateOfBirth(((UserSeekerRegisterRequestDTO) userRegDTO).getDateOfBirth());
+////            seeker.setUserAccount(userAcc);
+//            seekerService.createSeeker(seeker);
+//            userAcc.setSeeker(seeker);
+//        }
+//        else if(userRegDTO instanceof UserCompanyRegisterRequestDTO){
+//            Company company = new Company();
+//            company.setName(((UserCompanyRegisterRequestDTO) userRegDTO).getName());
+//            company.setBusinessStreamName(((UserCompanyRegisterRequestDTO) userRegDTO).getBusinessStreamName());
+//            company.setCompanyDescription(((UserCompanyRegisterRequestDTO) userRegDTO).getCompanyDescription());
+//            company.setCompanyWebsiteUrl(((UserCompanyRegisterRequestDTO) userRegDTO).getCompanyWebsiteUrl());
+//            company = companyService.createCompany(company);
+//            userAcc.setCompany(company);
+//            System.out.println("Comp user: " + userAcc);
+//        }
+//        return userAcc;
+        return null;
     }
 }

@@ -13,6 +13,7 @@ public class CustomUserDetails implements UserDetails {
     private UserAccount user;
 
     public CustomUserDetails(UserAccount user) {
+        System.out.println("CustomUserDetails constructor");
         this.user = user;
     }
 

@@ -1,5 +1,6 @@
 package devtitans.antoshchuk.devfusion2025backend.controllers;
 
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.CompanyMapper;
 import devtitans.antoshchuk.devfusion2025backend.services.CompanyService;
@@ -26,5 +27,8 @@ public class CompanyController {
     public ResponseEntity<List<CompanyWithPostsResponseDTO>> getAllCompaniesWithPosts() {
         return ResponseEntity.ok(companyService.getAllCompaniesWithPostsDTOs());
     }
-
+    @GetMapping("/short_info")
+    public ResponseEntity<List<CompanyBaseResponseDTO>> getAllCompaniesBaseInfo() {
+        return ResponseEntity.ok(companyService.getAllCompaniesBaseInfoDTOs());
+    }
 }

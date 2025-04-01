@@ -1,11 +1,11 @@
 package devtitans.antoshchuk.devfusion2025backend.security.util.jwt;
 
+import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
+import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
+import devtitans.antoshchuk.devfusion2025backend.security.detail.CustomUserDetails;
 import devtitans.antoshchuk.devfusion2025backend.services.CustomUserDetailsService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,13 +29,21 @@ public class JwtTokenProvider {
 
     @Autowired
     private CustomUserDetailsService userService;
+    @Autowired
+    private UserAccountRepository userAccountRepository;
+
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String username = userDetails.getUsername();
+        UserAccount userAccount = userAccountRepository.findByEmail(username);
+        Seeker seeker = userAccount.getSeeker();
 
-        UserAccount user = (UserAccount) userService.loadUserByUsername(username);
+//        CustomUserDetails user = (CustomUserDetails)authentication.getPrincipal();
+//        UserAccount userAccount = new UserAccount();
+//        userAccount.setUsername(username);
         Claims claims = Jwts.claims().setSubject(username);
 //        claims.put("role", user.getRole());
+        claims.put("full_name", seeker.getFirstName() + " " + seeker.getLastName());
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);

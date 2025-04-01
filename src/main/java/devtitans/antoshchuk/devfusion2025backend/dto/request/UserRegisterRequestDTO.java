@@ -1,29 +1,32 @@
 package devtitans.antoshchuk.devfusion2025backend.dto.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 public class UserRegisterRequestDTO {
-    private String username;
-    private String email;
-    private String gender;
-    private String contactNumber;
-    private String password;
+    private UserAccountDTO user;
+    private UserSeekerRegisterRequestDTO seeker;
+    private UserCompanyRegisterRequestDTO company;
 
     @Override
     public String toString() {
         return "UserRegisterRequestDTO{" +
-                "username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                ", gender='" + gender + '\'' +
-                ", contactNumber='" + contactNumber + '\'' +
-                ", password='" + password + '\'' +
+                "user=" + user +
+                ", seeker=" + seeker +
+                ", company=" + company +
                 '}';
     }
+//    @Override
+//    public String toString() {
+//        return "UserRegisterRequestDTO{" +
+//                "username='" + username + '\'' +
+//                ", email='" + email + '\'' +
+//                ", gender='" + gender + '\'' +
+//                ", contactNumber='" + contactNumber + '\'' +
+//                ", password='" + password + '\'' +
+//                '}';
+//    }
 }

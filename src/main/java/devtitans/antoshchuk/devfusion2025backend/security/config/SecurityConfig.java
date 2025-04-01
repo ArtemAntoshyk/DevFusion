@@ -29,16 +29,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf().disable() // Вимикаємо CSRF для REST API
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Без сесій
+                .csrf().disable()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll() // Публічний доступ до авторизації
-                        .requestMatchers("/api/**").authenticated() // Публічний доступ до авторизації
-                        .anyRequest().authenticated() // Захист решти маршрутів
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/companies/**").permitAll()
+//                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class); // Додаємо JWT-фільтр
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

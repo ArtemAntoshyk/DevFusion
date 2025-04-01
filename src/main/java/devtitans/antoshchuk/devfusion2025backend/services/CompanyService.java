@@ -1,5 +1,6 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.CompanyMapper;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
@@ -32,6 +33,14 @@ public class CompanyService {
         List<Company> companies = getAllCompanies();
         return companies.stream()
                 .map(company -> companyMapper.companyToCompanyWithPostsResponseDTO(company))
+                .toList();
+    }
+
+    @Transactional
+    public List<CompanyBaseResponseDTO> getAllCompaniesBaseInfoDTOs() {
+        List<Company> companies = getAllCompanies();
+        return companies.stream()
+                .map(company -> companyMapper.companyToCompanyBaseResponseDTO(company))
                 .toList();
     }
 
