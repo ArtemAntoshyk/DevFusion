@@ -1,9 +1,11 @@
 package devtitans.antoshchuk.devfusion2025backend.security.util.jwt;
 
+import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
 import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.services.CustomUserDetailsService;
+import devtitans.antoshchuk.devfusion2025backend.util.mappers.UserTypes;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -38,14 +40,20 @@ public class JwtTokenProvider {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String username = userDetails.getUsername();
         UserAccount userAccount = userAccountRepository.findByEmail(username);
-        Seeker seeker = userAccount.getSeeker();
+        Claims claims = Jwts.claims().setSubject(username);
+        if(userAccount.getUserType().getName().equals("COMPANY")) {
+            Company company = userAccount.getCompany();
+            claims.put("full_name", company.getName());
+        }
+        else if(userAccount.getUserType().getName().equals("SEEKER")) {
+            Seeker seeker = userAccount.getSeeker();
+            claims.put("full_name", seeker.getFirstName() + " " + seeker.getLastName());
+        }
 
 //        CustomUserDetails user = (CustomUserDetails)authentication.getPrincipal();
 //        UserAccount userAccount = new UserAccount();
 //        userAccount.setUsername(username);
-        Claims claims = Jwts.claims().setSubject(username);
 //        claims.put("role", user.getRole());
-        claims.put("full_name", seeker.getFirstName() + " " + seeker.getLastName());
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);

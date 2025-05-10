@@ -1,11 +1,11 @@
 package devtitans.antoshchuk.devfusion2025backend.util.mappers;
 
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyAllInfoResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.PropertyMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +19,15 @@ public class CompanyMapper {
     public CompanyMapper(ModelMapper modelMapper) {
         this.modelMapper = modelMapper;
 //        configureMappings(); // Винесли налаштування сюди
+    }
+    public CompanyAllInfoResponseDTO toAllInfoDTO(Company company) {
+        CompanyAllInfoResponseDTO dto = modelMapper.map(company, CompanyAllInfoResponseDTO.class);
+//        dto.setCompanyImages(
+//                company.getCompanyImages().stream()
+//                        .map(CompanyImage::getImageUrl) // припускаємо, що є getImageUrl()
+//                        .collect(Collectors.toList())
+//        );
+        return dto;
     }
 
 //    private void configureMappings() {
@@ -40,12 +49,11 @@ public class CompanyMapper {
         return companyWithPostsResponseDTO;
     }
 
-    public CompanyBaseResponseDTO companyToCompanyBaseResponseDTO(Company company) {
-        CompanyBaseResponseDTO companyBaseResponseDTO = modelMapper.map(company, CompanyBaseResponseDTO.class);
-//        CompanyBaseResponseDTO.setJobPostIds(
-//                company.getJobPosts().stream().map(JobPost::getId).toList()
-//        );
-        return companyBaseResponseDTO;
+    public CompanyBaseResponseDTO toBaseDTO(Company company) {
+        return modelMapper.map(company, CompanyBaseResponseDTO.class);
     }
 
+    public CompanyAllInfoResponseDTO companyToCompanyAllInfoResponseDTO(Company company) {
+        return modelMapper.map(company, CompanyAllInfoResponseDTO.class);
+    }
 }
