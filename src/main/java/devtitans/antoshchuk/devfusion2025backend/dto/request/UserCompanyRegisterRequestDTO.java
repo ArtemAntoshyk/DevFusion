@@ -11,7 +11,7 @@ import java.util.Date;
 @NoArgsConstructor
 @Getter
 @Setter
-public class UserCompanyRegisterRequestDTO extends UserRegisterRequestDTO{
+public class UserCompanyRegisterRequestDTO{
     private String name;
     private String businessStreamName;
     private String companyDescription;
