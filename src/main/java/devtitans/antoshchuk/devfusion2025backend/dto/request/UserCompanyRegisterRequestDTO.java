@@ -15,7 +15,6 @@ public class UserCompanyRegisterRequestDTO extends UserRegisterRequestDTO{
     private String name;
     private String businessStreamName;
     private String companyDescription;
-    private String companyWebsiteUrl;
 
     @Override
     public String toString() {
@@ -23,7 +22,6 @@ public class UserCompanyRegisterRequestDTO extends UserRegisterRequestDTO{
                 "name='" + name + '\'' +
                 ", businessStreamName='" + businessStreamName + '\'' +
                 ", companyDescription='" + companyDescription + '\'' +
-                ", companyWebsiteUrl='" + companyWebsiteUrl + '\'' +
                 '}';
     }
 }

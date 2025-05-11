@@ -40,31 +40,29 @@ public class JwtTokenProvider {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String username = userDetails.getUsername();
         UserAccount userAccount = userAccountRepository.findByEmail(username);
+
         Claims claims = Jwts.claims().setSubject(username);
+        claims.put("userId", userAccount.getId());
+        claims.put("userType", userAccount.getUserType().getName());
+
         if(userAccount.getUserType().getName().equals("COMPANY")) {
             Company company = userAccount.getCompany();
-            claims.put("full_name", company.getName());
+            claims.put("fullName", company.getName());
         }
         else if(userAccount.getUserType().getName().equals("SEEKER")) {
             Seeker seeker = userAccount.getSeeker();
-            claims.put("full_name", seeker.getFirstName() + " " + seeker.getLastName());
+            claims.put("fullName", seeker.getFirstName() + " " + seeker.getLastName());
         }
-
-//        CustomUserDetails user = (CustomUserDetails)authentication.getPrincipal();
-//        UserAccount userAccount = new UserAccount();
-//        userAccount.setUsername(username);
-//        claims.put("role", user.getRole());
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
-        String token = Jwts.builder()
+
+        return Jwts.builder()
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(validity)
                 .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
-        System.out.println(token);
-        return token;
     }
 
     public String getUsername(String token) {

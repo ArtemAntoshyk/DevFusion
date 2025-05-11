@@ -16,6 +16,5 @@ public class UserSeekerRegisterRequestDTO{
 //    private UserRegisterRequestDTO userRegisterRequestDTO;
     private String firstName;
     private String lastName;
-    private Date dateOfBirth;
 
 }
