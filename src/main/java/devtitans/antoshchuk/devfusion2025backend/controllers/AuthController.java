@@ -2,8 +2,17 @@ package devtitans.antoshchuk.devfusion2025backend.controllers;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserLoginRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserRegisterRequestDTO;
+import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
+import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.security.util.jwt.JwtTokenProvider;
 import devtitans.antoshchuk.devfusion2025backend.services.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,57 +20,99 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Endpoints for user registration and login")
 public class AuthController {
+
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
-    private AuthService authService;
+    private final AuthService authService;
+    private final UserAccountRepository userAccountRepository;
+
     @Autowired
-    public AuthController(AuthService authService, AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider) {
+    public AuthController(AuthService authService,
+                          AuthenticationManager authenticationManager,
+                          JwtTokenProvider jwtTokenProvider,
+                          UserAccountRepository userAccountRepository) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userAccountRepository = userAccountRepository;
     }
-    // registration user with role seeker or company
 
+    @Operation(summary = "Register a new user", description = "Registers a job seeker or a company and logs them in automatically.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User successfully registered and authenticated",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(example = "{\"token\": \"jwt-token\", \"role\": \"USER\", \"userId\": \"1\"}"))),
+            @ApiResponse(responseCode = "400", description = "Invalid registration data", content = @Content)
+    })
     @PostMapping("/register")
-    public ResponseEntity registerUser(@RequestBody UserRegisterRequestDTO userRegDTO) {
-        System.out.println(userRegDTO);
-//        UserAccount newAcc = authService.registerUser(userRegDTO);
-        if(userRegDTO.getSeeker() != null) {
-            authService.registerSeeker(userRegDTO);
-        } else if (userRegDTO.getCompany() != null) {
-            authService.registerCompany(userRegDTO);
-        }
-        return ResponseEntity.ok("Successfully registered");
-    }
+    public ResponseEntity<Map<String, String>> registerUser(
+            @RequestBody(description = "User registration data", required = true)
+            @org.springframework.web.bind.annotation.RequestBody UserRegisterRequestDTO userRegDTO) {
 
-    @PostMapping("/login")
-    public ResponseEntity loginUser(@RequestBody UserLoginRequestDTO userLoginRequestDTO) {
-        System.out.println(userLoginRequestDTO);
+        UserAccount newUser;
+        if (userRegDTO.getSeeker() != null) {
+            newUser = authService.registerSeeker(userRegDTO);
+        } else if (userRegDTO.getCompany() != null) {
+            newUser = authService.registerCompany(userRegDTO);
+        } else {
+            throw new RuntimeException("Invalid registration data");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(userLoginRequestDTO.getEmail(), userLoginRequestDTO.getPassword())
+                new UsernamePasswordAuthenticationToken(
+                        userRegDTO.getUser().getEmail(),
+                        userRegDTO.getUser().getPassword()
+                )
         );
+
         String token = jwtTokenProvider.generateToken(authentication);
+        UserAccount userAccount = userAccountRepository.findByEmail(newUser.getEmail());
+
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
-        System.out.println(response);
+        response.put("role", userAccount.getUserType().getName());
+        response.put("userId", String.valueOf(userAccount.getId()));
+
         return ResponseEntity.ok(response);
     }
-//@PostMapping("/login")
-//public ResponseEntity loginUser(@RequestBody UserLoginRequestDTO userLoginRequestDTO) {
-//
-//    System.out.println(userLoginRequestDTO);
-//    return ResponseEntity.ok("Successfully logged in");
-//}
+
+    @Operation(summary = "Authenticate a user", description = "Logs in a user by verifying email and password.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(example = "{\"token\": \"jwt-token\", \"role\": \"USER\", \"userId\": \"1\"}"))),
+            @ApiResponse(responseCode = "401", description = "Invalid login credentials", content = @Content)
+    })
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, String>> loginUser(
+            @RequestBody(description = "User login credentials", required = true)
+            @org.springframework.web.bind.annotation.RequestBody UserLoginRequestDTO userLoginRequestDTO) {
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        userLoginRequestDTO.getEmail(),
+                        userLoginRequestDTO.getPassword()
+                )
+        );
+
+        String token = jwtTokenProvider.generateToken(authentication);
+        UserAccount userAccount = userAccountRepository.findByEmail(userLoginRequestDTO.getEmail());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("token", token);
+        response.put("role", userAccount.getUserType().getName());
+        response.put("userId", String.valueOf(userAccount.getId()));
+
+        return ResponseEntity.ok(response);
+    }
 }

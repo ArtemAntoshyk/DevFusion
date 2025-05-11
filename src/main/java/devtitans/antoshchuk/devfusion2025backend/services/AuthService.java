@@ -14,7 +14,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 @Service
 public class AuthService {
     @Autowired
@@ -39,16 +38,19 @@ public class AuthService {
         return userAccountRepository.save(registeredAccount);
     }
 
-    public void registerSeeker(UserRegisterRequestDTO userRegisterRequestDTO) {
+    public UserAccount registerSeeker(UserRegisterRequestDTO userRegisterRequestDTO) {
         UserAccount userAccount = registerUser(userRegisterRequestDTO.getUser(), UserTypes.SEEKER);
         Seeker seeker = modelMapper.map(userRegisterRequestDTO.getSeeker(), Seeker.class);
-        seeker.setUserAccount(userAccountRepository.save(userAccount));
+        seeker.setUserAccount(userAccount);
         seekerRepository.save(seeker);
+        return userAccount;
     }
-    public void registerCompany(UserRegisterRequestDTO userRegisterRequestDTO) {
+
+    public UserAccount registerCompany(UserRegisterRequestDTO userRegisterRequestDTO) {
         UserAccount userAccount = registerUser(userRegisterRequestDTO.getUser(), UserTypes.COMPANY);
         Company company = modelMapper.map(userRegisterRequestDTO.getCompany(), Company.class);
-        company.setUser(userAccountRepository.save(userAccount));
+        company.setUser(userAccount);
         companyRepository.save(company);
+        return userAccount;
     }
 }
