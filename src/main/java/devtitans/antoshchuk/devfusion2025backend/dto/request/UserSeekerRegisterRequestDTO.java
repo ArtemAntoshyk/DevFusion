@@ -1,11 +1,6 @@
 package devtitans.antoshchuk.devfusion2025backend.dto.request;
 
-import devtitans.antoshchuk.devfusion2025backend.models.user.Gender;
-import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
-import jakarta.persistence.Column;
 import lombok.*;
-
-import java.util.Date;
 
 @AllArgsConstructor
 @NoArgsConstructor

@@ -22,11 +22,6 @@ public class UserAccount {
     @ManyToOne
     @JoinColumn(name = "user_type_id", referencedColumnName = "id")
     private UserType userType;
-    @ManyToOne
-    @JoinColumn(name = "gender_id", referencedColumnName = "id")
-    private Gender gender;
-    @Column(name = "username")
-    private String username;
     @Column(name = "email")
     private String email;
     @Column(name = "password")
@@ -48,10 +43,9 @@ public class UserAccount {
     @OneToOne(mappedBy = "user")
     private Company company;
 
-    public UserAccount(UserType userType, Gender gender, String username, String email, String password, String contactNumber, String userImage, boolean active, boolean emailNotificationActive, Date registrationDate) {
+    public UserAccount(UserType userType,  String email, String password, String contactNumber, String userImage, boolean active, boolean emailNotificationActive, Date registrationDate) {
         this.userType = userType;
-        this.gender = gender;
-        this.username = username;
+
         this.email = email;
         this.password = password;
         this.contactNumber = contactNumber;
@@ -66,8 +60,6 @@ public class UserAccount {
         return "UserAccount{" +
                 "id=" + id +
                 ", userType=" + userType +
-                ", gender=" + gender +
-                ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
                 ", password='" + password + '\'' +
                 ", contactNumber='" + contactNumber + '\'' +

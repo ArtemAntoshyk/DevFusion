@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/**").permitAll()
+                        .anyRequest().permitAll()  // Allow all requests without authentication
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
