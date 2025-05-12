@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -97,22 +98,28 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> loginUser(
             @RequestBody(description = "User login credentials", required = true)
             @org.springframework.web.bind.annotation.RequestBody UserLoginRequestDTO userLoginRequestDTO) {
+        System.out.println("Login attempt for: " + userLoginRequestDTO.getEmail());
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            userLoginRequestDTO.getEmail(),
+                            userLoginRequestDTO.getPassword()
+                    )
+            );
+            System.out.println("Authentication successful");
+            String token = jwtTokenProvider.generateToken(authentication);
+            UserAccount userAccount = userAccountRepository.findByEmail(userLoginRequestDTO.getEmail());
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        userLoginRequestDTO.getEmail(),
-                        userLoginRequestDTO.getPassword()
-                )
-        );
 
-        String token = jwtTokenProvider.generateToken(authentication);
-        UserAccount userAccount = userAccountRepository.findByEmail(userLoginRequestDTO.getEmail());
-
-        Map<String, String> response = new HashMap<>();
-        response.put("token", token);
-        response.put("role", userAccount.getUserType().getName());
-        response.put("userId", String.valueOf(userAccount.getId()));
-
-        return ResponseEntity.ok(response);
+            Map<String, String> response = new HashMap<>();
+            response.put("token", token);
+            response.put("role", userAccount.getUserType().getName());
+            response.put("userId", String.valueOf(userAccount.getId()));
+            System.out.println(response);
+            return ResponseEntity.ok(response);
+        } catch (AuthenticationException e) {
+            System.out.println("Authentication failed: " + e.getMessage());
+            throw e;
+        }
     }
 }
