@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @EnableJpaRepositories
 public interface UserAccountRepository extends JpaRepository<UserAccount, Long> {
-    UserAccount findByUsername(String username);
+
     UserAccount findByEmail(String email);
-    boolean existsByEmailOrUsernameOrContactNumber(String email, String username, String contactNumber);
-    boolean existsByEmailOrUsername(String email, String username);
+    boolean existsByEmailOrContactNumber(String email, String contactNumber);
+    boolean existsByEmail(String email);
 }

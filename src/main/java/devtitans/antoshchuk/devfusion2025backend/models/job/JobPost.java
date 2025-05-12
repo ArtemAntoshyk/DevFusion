@@ -36,10 +36,6 @@ public class JobPost {
     private String jobDescription;
     @Column(name = "job_location")
     private String jobLocation;
-    @Column(name = "latitude")
-    private double latitude;
-    @Column(name = "longitude")
-    private double longitude;
     @Column(name = "is_company_name_hidden")
     private boolean isCompanyNameHidden;
     @Column(name = "created_date_time")
@@ -53,15 +49,13 @@ public class JobPost {
 
 
 
-    public JobPost(Company company, JobType jobType, JobGradation jobGradation, String title, String jobDescription, String jobLocation, double latitude, double longitude, boolean isCompanyNameHidden, Date createdAt, boolean isActive, List<JobPostActivity> jobPostActivities) {
+    public JobPost(Company company, JobType jobType, JobGradation jobGradation, String title, String jobDescription, String jobLocation,  boolean isCompanyNameHidden, Date createdAt, boolean isActive, List<JobPostActivity> jobPostActivities) {
         this.company = company;
         this.jobType = jobType;
         this.jobGradation = jobGradation;
         this.title = title;
         this.jobDescription = jobDescription;
         this.jobLocation = jobLocation;
-        this.latitude = latitude;
-        this.longitude = longitude;
         this.isCompanyNameHidden = isCompanyNameHidden;
         this.createdAt = createdAt;
         this.isActive = isActive;
