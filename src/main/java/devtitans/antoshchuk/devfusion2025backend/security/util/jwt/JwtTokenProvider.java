@@ -5,14 +5,12 @@ import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
 import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.services.CustomUserDetailsService;
-import devtitans.antoshchuk.devfusion2025backend.util.mappers.UserTypes;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,11 +28,8 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long validityInMilliseconds;
 
-
-    @Autowired
-    private CustomUserDetailsService userService;
-    @Autowired
-    private UserAccountRepository userAccountRepository;
+    private final CustomUserDetailsService userService;
+    private final UserAccountRepository userAccountRepository;
 
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
@@ -45,14 +40,23 @@ public class JwtTokenProvider {
         claims.put("userId", userAccount.getId());
         claims.put("userType", userAccount.getUserType().getName());
 
-        if(userAccount.getUserType().getName().equals("COMPANY")) {
+        String fullName = "";
+
+        if ("COMPANY".equals(userAccount.getUserType().getName())) {
             Company company = userAccount.getCompany();
-            claims.put("fullName", company.getName());
-        }
-        else if(userAccount.getUserType().getName().equals("SEEKER")) {
+            if (company != null && company.getName() != null) {
+                fullName = company.getName();
+            }
+        } else if ("SEEKER".equals(userAccount.getUserType().getName())) {
             Seeker seeker = userAccount.getSeeker();
-            claims.put("fullName", seeker.getFirstName() + " " + seeker.getLastName());
+            if (seeker != null) {
+                String firstName = seeker.getFirstName() != null ? seeker.getFirstName() : "";
+                String lastName = seeker.getLastName() != null ? seeker.getLastName() : "";
+                fullName = (firstName + " " + lastName).trim();
+            }
         }
+
+        claims.put("fullName", fullName);
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);
@@ -66,7 +70,11 @@ public class JwtTokenProvider {
     }
 
     public String getUsername(String token) {
-        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
+        return Jwts.parser()
+                .setSigningKey(secretKey)
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
     }
 
     public String getRole(String token) {
@@ -96,5 +104,4 @@ public class JwtTokenProvider {
         }
         return null;
     }
-
 }
