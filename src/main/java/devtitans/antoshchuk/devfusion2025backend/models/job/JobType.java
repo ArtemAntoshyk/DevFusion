@@ -1,4 +1,5 @@
 package devtitans.antoshchuk.devfusion2025backend.models.job;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,30 +8,29 @@ import lombok.Setter;
 
 import java.util.List;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
 @Entity
 @Table(name = "job_type")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class JobType {
     @Id
-    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
+
     @Column(name = "type")
-    private String type;
+    private String name;
 
     @OneToMany(mappedBy = "jobType")
     private List<JobPost> jobPosts;
 
-
-    public JobType(String type) {
-        this.type = type;
+    public JobType(String name) {
+        this.name = name;
     }
 
-    public JobType(String type, List<JobPost> jobPosts) {
-        this.type = type;
+    public JobType(String name, List<JobPost> jobPosts) {
+        this.name = name;
         this.jobPosts = jobPosts;
     }
 }

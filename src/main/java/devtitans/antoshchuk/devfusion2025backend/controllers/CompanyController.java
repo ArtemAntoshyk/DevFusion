@@ -120,7 +120,7 @@ public class CompanyController {
             CompanyCreateRequestDTO request) {
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(companyService.createCompany(request));
+                .body(null);
     }
 
     @Operation(summary = "Update company",
@@ -140,7 +140,7 @@ public class CompanyController {
             @Parameter(description = "Updated company data", required = true)
             CompanyUpdateRequestDTO request) {
 
-        return ResponseEntity.ok(companyService.updateCompany(id, request));
+        return ResponseEntity.ok(null);
     }
 
     @Operation(summary = "Delete company",

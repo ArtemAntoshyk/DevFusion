@@ -58,18 +58,6 @@ public class CompanyService {
                 .toList();
     }
 
-    public Company createCompany(@Valid CompanyCreateRequestDTO requestDTO) {
-        Company company = new Company();
-        company.setName(requestDTO.getName());
-        company.setBusinessStreamName(requestDTO.getBusinessStreamName());
-        company.setCompanyLogo(requestDTO.getCompanyLogo());
-        company.setCompanyDescription(requestDTO.getCompanyDescription());
-        company.setEstablishmentDate(requestDTO.getEstablishmentDate());
-        company.setCompanyWebsiteUrl(requestDTO.getCompanyWebsiteUrl());
-        // У разі наявності CompanyImage — логіку збереження окремо треба додати тут
-
-        return companyRepository.save(company);
-    }
 
     public PaginatedCompanyResponseDTO getFilteredCompanies(Pageable pageable, String search, String businessStream) {
 
@@ -120,21 +108,6 @@ public class CompanyService {
         companyRepository.deleteById(id);
     }
 
-    @Transactional
-    public CompanyAllInfoResponseDTO updateCompany(int id, @Valid CompanyUpdateRequestDTO request) {
-        Company company = companyRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Company with ID " + id + " not found"));
-
-        company.setName(request.getName());
-        company.setBusinessStreamName(request.getBusinessStreamName());
-        company.setCompanyLogo(request.getCompanyLogo());
-        company.setCompanyDescription(request.getCompanyDescription());
-        company.setEstablishmentDate(request.getEstablishmentDate());
-        company.setCompanyWebsiteUrl(request.getCompanyWebsiteUrl());
-
-        Company updatedCompany = companyRepository.save(company);
-        return companyMapper.companyToCompanyAllInfoResponseDTO(updatedCompany);
-    }
 
 
 }
