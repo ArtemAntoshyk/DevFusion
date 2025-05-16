@@ -10,6 +10,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -31,10 +32,16 @@ public class JwtTokenProvider {
     private final CustomUserDetailsService userService;
     private final UserAccountRepository userAccountRepository;
 
+    @Transactional
     public String generateToken(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String username = userDetails.getUsername();
+        
+        // Получаем свежие данные из базы
         UserAccount userAccount = userAccountRepository.findByEmail(username);
+        if (userAccount == null) {
+            throw new RuntimeException("User not found");
+        }
 
         Claims claims = Jwts.claims().setSubject(username);
         claims.put("userId", userAccount.getId());
@@ -52,7 +59,9 @@ public class JwtTokenProvider {
             if (seeker != null) {
                 String firstName = seeker.getFirstName() != null ? seeker.getFirstName() : "";
                 String lastName = seeker.getLastName() != null ? seeker.getLastName() : "";
-                fullName = (firstName + " " + lastName).trim();
+                if (!firstName.isEmpty() || !lastName.isEmpty()) {
+                    fullName = (firstName + " " + lastName).trim();
+                }
             }
         }
 
