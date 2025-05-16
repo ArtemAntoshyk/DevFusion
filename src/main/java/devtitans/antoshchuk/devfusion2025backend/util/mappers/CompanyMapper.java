@@ -3,6 +3,7 @@ package devtitans.antoshchuk.devfusion2025backend.util.mappers;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyAllInfoResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyDetailsDTO;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import org.modelmapper.ModelMapper;
@@ -55,5 +56,21 @@ public class CompanyMapper {
 
     public CompanyAllInfoResponseDTO companyToCompanyAllInfoResponseDTO(Company company) {
         return modelMapper.map(company, CompanyAllInfoResponseDTO.class);
+    }
+
+    public CompanyDetailsDTO toDetailsDTO(Company company) {
+        if (company == null) {
+            return null;
+        }
+
+        CompanyDetailsDTO dto = new CompanyDetailsDTO();
+        dto.setId(company.getId());
+        dto.setLogo(company.getLogo());
+        dto.setName(company.getName());
+        dto.setBusinessStreamName(company.getBusinessStreamName());
+        dto.setContactNumber(company.getUser().getContactNumber());
+        dto.setDescription(company.getCompanyDescription());
+
+        return dto;
     }
 }

@@ -7,30 +7,29 @@ import lombok.Setter;
 
 import java.util.List;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
 @Entity
 @Table(name = "job_gradation")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class JobGradation {
     @Id
-    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
+
     @Column(name = "gradation")
-    private String gradation;
+    private String name;
 
     @OneToMany(mappedBy = "jobGradation")
     private List<JobPost> jobPosts;
 
-
-    public JobGradation(String gradation) {
-        this.gradation = gradation;
+    public JobGradation(String name) {
+        this.name = name;
     }
 
-    public JobGradation(String gradation, List<JobPost> jobPosts) {
-        this.gradation = gradation;
+    public JobGradation(String name, List<JobPost> jobPosts) {
+        this.name = name;
         this.jobPosts = jobPosts;
     }
 }
