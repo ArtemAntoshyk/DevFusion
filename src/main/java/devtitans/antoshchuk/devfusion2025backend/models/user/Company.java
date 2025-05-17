@@ -35,7 +35,7 @@ public class Company {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private UserAccount user;
 
-    @OneToMany(mappedBy = "company")
+    @OneToMany(mappedBy = "company", fetch = FetchType.LAZY)
     private List<JobPost> jobPosts;
 
     public Company(String name, String logo, String businessStreamName, String companyDescription) {
