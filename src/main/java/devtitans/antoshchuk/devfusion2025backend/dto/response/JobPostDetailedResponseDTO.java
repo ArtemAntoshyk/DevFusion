@@ -17,14 +17,20 @@ public class JobPostDetailedResponseDTO {
     @Schema(description = "Job post ID", example = "1")
     private Integer id;
 
-    @Schema(description = "Job title", example = "Senior Java Developer")
+    @Schema(description = "Job title in default language", example = "Senior Java Developer")
     private String title;
+
+    @Schema(description = "Job title in English", example = "Senior Java Developer")
+    private String titleEn;
 
     @Schema(description = "Job location", example = "Kyiv, Ukraine")
     private String jobLocation;
 
-    @Schema(description = "Detailed job description")
+    @Schema(description = "Detailed job description in default language")
     private String jobDescription;
+
+    @Schema(description = "Detailed job description in English")
+    private String jobDescriptionEn;
 
     @Schema(description = "Whether company name is hidden", example = "false")
     private boolean isCompanyNameHidden;
@@ -40,6 +46,12 @@ public class JobPostDetailedResponseDTO {
 
     @Schema(description = "Whether the job post is active", example = "true")
     private boolean isActive;
+
+    @Schema(description = "Salary information", example = "5000-7000 USD")
+    private String salary;
+
+    @Schema(description = "Primary language requirement", example = "Ukrainian")
+    private String language;
 
     @Schema(description = "Detailed company information")
     private CompanyDetailsDTO company;

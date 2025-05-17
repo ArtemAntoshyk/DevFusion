@@ -31,11 +31,15 @@ public class JobPostMapper {
         JobPostDetailedResponseDTO dto = new JobPostDetailedResponseDTO();
         dto.setId(jobPost.getId());
         dto.setTitle(jobPost.getTitle());
+        dto.setTitleEn(jobPost.getTitleEn());
         dto.setJobLocation(jobPost.getJobLocation());
         dto.setJobDescription(jobPost.getJobDescription());
+        dto.setJobDescriptionEn(jobPost.getJobDescriptionEn());
         dto.setCompanyNameHidden(jobPost.isCompanyNameHidden());
         dto.setCreatedDateTime(jobPost.getCreatedDateTime());
         dto.setActive(jobPost.isActive());
+        dto.setSalary(jobPost.getSalary());
+        dto.setLanguage(jobPost.getLanguage());
         
         // Map job type
         if (jobPost.getJobType() != null) {

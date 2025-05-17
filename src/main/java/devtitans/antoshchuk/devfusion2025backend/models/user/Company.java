@@ -22,7 +22,7 @@ public class Company {
     @Column(name = "name")
     private String name;
 
-    @Column(name = "logo_url")
+    @Column(name = "company_logo")
     private String logo;
 
     @Column(name = "business_stream_name")

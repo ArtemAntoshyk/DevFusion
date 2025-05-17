@@ -36,8 +36,14 @@ public class JobPost {
     @Column(name = "title")
     private String title;
 
+    @Column(name = "title_en")
+    private String titleEn;
+
     @Column(name = "job_description")
     private String jobDescription;
+
+    @Column(name = "job_description_en")
+    private String jobDescriptionEn;
 
     @Column(name = "job_location")
     private String jobLocation;
@@ -52,19 +58,12 @@ public class JobPost {
     @Column(name = "is_active")
     private boolean isActive;
 
+    @Column(name = "salary", length = 40)
+    private String salary;
+
+    @Column(name = "language", length = 100)
+    private String language;
+
     @OneToMany(mappedBy = "jobPost")
     private List<JobPostActivity> jobPostActivities;
-
-    public JobPost(Company company, JobType jobType, JobGradation jobGradation, String title, String jobDescription, String jobLocation, boolean isCompanyNameHidden, Date createdDateTime, boolean isActive, List<JobPostActivity> jobPostActivities) {
-        this.company = company;
-        this.jobType = jobType;
-        this.jobGradation = jobGradation;
-        this.title = title;
-        this.jobDescription = jobDescription;
-        this.jobLocation = jobLocation;
-        this.isCompanyNameHidden = isCompanyNameHidden;
-        this.createdDateTime = createdDateTime;
-        this.isActive = isActive;
-        this.jobPostActivities = jobPostActivities;
-    }
 }
