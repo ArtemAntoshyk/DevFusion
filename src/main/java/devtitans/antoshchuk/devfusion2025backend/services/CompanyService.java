@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -52,28 +53,14 @@ public class CompanyService {
 
     @Transactional
     public List<CompanyBaseResponseDTO> getAllCompaniesBaseInfoDTOs() {
-        List<Company> companies = getAllCompanies();
-        return companies.stream()
+        return companyRepository.findAllCompaniesBasic().stream()
                 .map(company -> companyMapper.toBaseDTO(company))
                 .toList();
     }
 
 
     public PaginatedCompanyResponseDTO getFilteredCompanies(Pageable pageable, String search, String businessStream) {
-
-        Page<Company> companyPage = companyRepository.findAll((root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            if (search != null && !search.trim().isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("name")), "%" + search.toLowerCase() + "%"));
-            }
-
-            if (businessStream != null && !businessStream.trim().isEmpty()) {
-                predicates.add(cb.equal(cb.lower(root.get("businessStreamName")), businessStream.toLowerCase()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        }, pageable);
+        Page<Company> companyPage = companyRepository.findFilteredCompanies(search, businessStream, pageable);
 
         List<CompanyBaseResponseDTO> dtos = companyPage.getContent()
                 .stream()
