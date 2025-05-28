@@ -1,8 +1,9 @@
 package devtitans.antoshchuk.devfusion2025backend.controllers;
 
-import devtitans.antoshchuk.devfusion2025backend.dto.request.CompanyCreateRequestDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.request.CompanyUpdateRequestDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.*;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyAllInfoResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.PaginatedCompanyResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.services.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,9 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;

@@ -18,8 +18,7 @@ public class JobPostSkill {
     @Column(name = "id")
     private int id;
 
-    @ManyToOne()
+    @ManyToOne
     @JoinColumn(name = "skill_set_id", referencedColumnName = "id")
     private Skill skill;
-
 }

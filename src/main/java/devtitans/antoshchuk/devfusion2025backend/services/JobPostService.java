@@ -1,14 +1,18 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
+import devtitans.antoshchuk.devfusion2025backend.dto.request.JobPostFilterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostDetailedResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.exceptions.ResourceNotFoundException;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.JobPostRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.JobPostRepository;
+import devtitans.antoshchuk.devfusion2025backend.specifications.JobPostSpecification;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.JobPostMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,6 +42,35 @@ public class JobPostService {
 
     public Page<JobPost> getAllJobPosts(int page, int size) {
         return jobPostRepository.findAll(PageRequest.of(page, size));
+    }
+
+    @Transactional
+    public Page<JobPostResponseDTO> getFilteredJobPosts(JobPostFilterRequestDTO filterRequest) {
+        Sort sort = Sort.by(
+            filterRequest.getSortDirection().equalsIgnoreCase("ASC") ? 
+            Sort.Direction.ASC : Sort.Direction.DESC,
+            filterRequest.getSortBy()
+        );
+
+        PageRequest pageRequest = PageRequest.of(
+            filterRequest.getPage(),
+            filterRequest.getSize(),
+            sort
+        );
+
+        Page<JobPost> jobPosts = jobPostRepository.findAll(
+            JobPostSpecification.withFilters(
+                filterRequest.getSearchQuery(),
+                filterRequest.getLocation(),
+                filterRequest.getCompanyId(),
+                filterRequest.getJobType(),
+                filterRequest.getGradation(),
+                filterRequest.getIsActive()
+            ),
+            pageRequest
+        );
+
+        return jobPosts.map(jobPostMapper::toResponseDTO);
     }
 
     @Transactional

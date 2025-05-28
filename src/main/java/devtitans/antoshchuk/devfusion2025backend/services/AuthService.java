@@ -1,39 +1,43 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserAccountDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.request.UserLoginRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserRegisterRequestDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.AuthResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.exceptions.UserAlreadyExistsException;
 import devtitans.antoshchuk.devfusion2025backend.exceptions.ValidationException;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.CompanyRepository;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.SeekerRepository;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.CompanyRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.SeekerRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.UserMapper;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.UserTypes;
+import devtitans.antoshchuk.devfusion2025backend.security.util.jwt.JwtTokenProvider;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
-    @Autowired
-    private UserAccountRepository userAccountRepository;
-    @Autowired
-    private UserMapper userMapper;
-    @Autowired
-    private UserTypeService userTypeService;
-    @Autowired
-    private ModelMapper modelMapper;
-    @Autowired
-    private SeekerRepository seekerRepository;
-    @Autowired
-    private CompanyRepository companyRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserAccountRepository userAccountRepository;
+    private final UserMapper userMapper;
+    private final UserTypeService userTypeService;
+    private final ModelMapper modelMapper;
+    private final SeekerRepository seekerRepository;
+    private final CompanyRepository companyRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
 
     private void validateUserAccount(UserAccountDTO userAccount) {
         if (userAccount == null) {
@@ -81,8 +85,8 @@ public class AuthService {
     UserAccount registerUser(UserAccountDTO userAccount, UserTypes userType) {
         validateUserAccount(userAccount);
         
-        // Проверка на существующий email
-        if (userAccountRepository.findByEmail(userAccount.getEmail()) != null) {
+        // Перевірка на існуючий email
+        if (userAccountRepository.findByEmail(userAccount.getEmail()).isPresent()) {
             throw new UserAlreadyExistsException("Користувач з таким email вже існує");
         }
 
@@ -99,14 +103,11 @@ public class AuthService {
         UserAccount userAccount = registerUser(userRegisterRequestDTO.getUser(), UserTypes.SEEKER);
         Seeker seeker = modelMapper.map(userRegisterRequestDTO.getSeeker(), Seeker.class);
         
-        // Устанавливаем двустороннюю связь
         seeker.setUserAccount(userAccount);
         userAccount.setSeeker(seeker);
         
-        // Сохраняем seeker
         seekerRepository.save(seeker);
         
-        // Обновляем и возвращаем обновленный userAccount
         return userAccountRepository.save(userAccount);
     }
 
@@ -119,5 +120,54 @@ public class AuthService {
         company.setUser(userAccount);
         companyRepository.save(company);
         return userAccount;
+    }
+
+    public AuthResponseDTO register(UserRegisterRequestDTO request) {
+        if (userAccountRepository.findByEmail(request.getUser().getEmail()) != null) {
+            throw new RuntimeException("User already exists");
+        }
+
+        UserAccount userAccount = new UserAccount();
+        userAccount.setEmail(request.getUser().getEmail());
+        userAccount.setPassword(passwordEncoder.encode(request.getUser().getPassword()));
+        
+        UserAccount savedUser = userAccountRepository.save(userAccount);
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                request.getUser().getEmail(),
+                request.getUser().getPassword()
+        );
+
+        String token = jwtTokenProvider.generateToken(authentication);
+
+        AuthResponseDTO response = new AuthResponseDTO();
+        response.setToken(token);
+        response.setRole(savedUser.getUserType().getName());
+        response.setUserId(Long.valueOf(savedUser.getId()));
+        return response;
+    }
+
+    public AuthResponseDTO authenticate(UserLoginRequestDTO request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+
+            UserAccount user = userAccountRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+            String token = jwtTokenProvider.generateToken(authentication);
+
+            AuthResponseDTO response = new AuthResponseDTO();
+            response.setToken(token);
+            response.setRole(user.getUserType().getName());
+            response.setUserId(Long.valueOf(user.getId()));
+            return response;
+        } catch (Exception e) {
+            throw new BadCredentialsException("Invalid credentials");
+        }
     }
 }

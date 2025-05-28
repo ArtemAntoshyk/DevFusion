@@ -1,9 +1,6 @@
 package devtitans.antoshchuk.devfusion2025backend.util.mappers;
 
-import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyDetailsDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.JobGradationDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostDetailedResponseDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.JobTypeDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.*;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +18,24 @@ public class JobPostMapper {
     @Autowired
     public JobPostMapper(CompanyMapper companyMapper) {
         this.companyMapper = companyMapper;
+    }
+
+    public JobPostResponseDTO toResponseDTO(JobPost jobPost) {
+        return JobPostResponseDTO.builder()
+            .id(jobPost.getId())
+            .title(jobPost.getTitle())
+            .description(jobPost.getJobDescription())
+            .location(jobPost.getJobLocation())
+            .company(mapCompanyToDTO(jobPost.getCompany()))
+            .build();
+    }
+
+    private JobPostResponseDTO.CompanyDTO mapCompanyToDTO(Company company) {
+        return JobPostResponseDTO.CompanyDTO.builder()
+            .id(company.getId())
+            .name(company.getName())
+            .logo(company.getLogo())
+            .build();
     }
 
     public JobPostDetailedResponseDTO toDetailedDTO(JobPost jobPost) {
@@ -58,7 +73,9 @@ public class JobPostMapper {
         }
 
         // Map company
-        dto.setCompany(companyMapper.toDetailsDTO(jobPost.getCompany()));
+        if (jobPost.getCompany() != null) {
+            dto.setCompany(companyMapper.toDetailsDTO(jobPost.getCompany()));
+        }
 
         return dto;
     }

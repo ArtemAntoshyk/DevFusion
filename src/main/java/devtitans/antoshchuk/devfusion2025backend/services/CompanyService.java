@@ -1,25 +1,19 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
-import devtitans.antoshchuk.devfusion2025backend.dto.request.CompanyCreateRequestDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.request.CompanyUpdateRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyAllInfoResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyWithPostsResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.PaginatedCompanyResponseDTO;
-import devtitans.antoshchuk.devfusion2025backend.util.mappers.CompanyMapper;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.CompanyRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.CompanyRepository;
+import devtitans.antoshchuk.devfusion2025backend.util.mappers.CompanyMapper;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -94,7 +88,4 @@ public class CompanyService {
     public void deleteCompany(int id) {
         companyRepository.deleteById(id);
     }
-
-
-
 }

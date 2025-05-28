@@ -1,7 +1,7 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserType;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.UserTypeRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.UserTypeRepository;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.UserTypes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,15 +16,15 @@ public class UserTypeService {
 
     public UserType getUserTypeByName(UserTypes type) {
         if(type == UserTypes.SEEKER){
-            return findUserTypeById(2L);
+            return findUserTypeById(2);
         }
         else if(type == UserTypes.COMPANY){
-            return findUserTypeById(1L);
+            return findUserTypeById(1);
         }
         throw new RuntimeException("NotFoundRole");
     }
 
-    private UserType findUserTypeById(Long id) {
+    private UserType findUserTypeById(Integer id) {
         return userTypeRepository.findById(id).orElse(null);
     }
 }

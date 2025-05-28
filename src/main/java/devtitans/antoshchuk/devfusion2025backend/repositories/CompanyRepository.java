@@ -1,4 +1,4 @@
-package devtitans.antoshchuk.devfusion2025backend.repositiories;
+package devtitans.antoshchuk.devfusion2025backend.repositories;
 
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import org.springframework.data.domain.Page;
@@ -6,15 +6,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@EnableJpaRepositories
+@Repository
 public interface CompanyRepository extends JpaRepository<Company, Integer>, JpaSpecificationExecutor<Company> {
-
+    
     Boolean existsByName(String name);
+    
     Company save(Company newCompany);
 
     @Query("SELECT DISTINCT c FROM Company c LEFT JOIN FETCH c.user WHERE 1=1")
@@ -26,4 +27,16 @@ public interface CompanyRepository extends JpaRepository<Company, Integer>, JpaS
     Page<Company> findFilteredCompanies(@Param("search") String search, 
                                       @Param("businessStream") String businessStream,
                                       Pageable pageable);
-}
+
+    @Query(value = """
+           SELECT DISTINCT c, COUNT(jp) as jobCount 
+           FROM Company c 
+           LEFT JOIN c.jobPosts jp 
+           LEFT JOIN FETCH c.user u 
+           GROUP BY c.id, c.name, c.logo, c.businessStreamName, c.companyDescription, 
+                    u.id, u.email, u.password, u.contactNumber, u.userImage, u.active, 
+                    u.emailNotificationActive, u.registrationDate 
+           ORDER BY COUNT(jp) DESC
+           """)
+    List<Object[]> findTopCompaniesByVacancyCount(@Param("limit") int limit);
+} 

@@ -2,9 +2,10 @@ package devtitans.antoshchuk.devfusion2025backend.controllers;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserLoginRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserRegisterRequestDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.AuthResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.exceptions.AuthenticationException;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.security.util.jwt.JwtTokenProvider;
 import devtitans.antoshchuk.devfusion2025backend.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -56,38 +58,14 @@ public class AuthController {
             @ApiResponse(responseCode = "409", description = "User already exists")
     })
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> registerUser(
+    public ResponseEntity<?> registerUser(
             @RequestBody(description = "User registration data", required = true)
             @org.springframework.web.bind.annotation.RequestBody UserRegisterRequestDTO userRegDTO) {
 
-        UserAccount newUser;
-        if (userRegDTO.getSeeker() != null) {
-            newUser = authService.registerSeeker(userRegDTO);
-        } else if (userRegDTO.getCompany() != null) {
-            newUser = authService.registerCompany(userRegDTO);
-        } else {
-            throw new AuthenticationException("Невірні дані для реєстрації");
-        }
-
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            userRegDTO.getUser().getEmail(),
-                            userRegDTO.getUser().getPassword()
-                    )
-            );
-
-            String token = jwtTokenProvider.generateToken(authentication);
-            UserAccount userAccount = userAccountRepository.findByEmail(newUser.getEmail());
-
-            Map<String, String> response = new HashMap<>();
-            response.put("token", token);
-            response.put("role", userAccount.getUserType().getName());
-            response.put("userId", String.valueOf(userAccount.getId()));
-
-            return ResponseEntity.ok(response);
-        } catch (BadCredentialsException e) {
-            throw new AuthenticationException("Помилка автентифікації після реєстрації");
+            return ResponseEntity.ok(authService.register(userRegDTO));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
@@ -97,33 +75,20 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Invalid login credentials")
     })
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> loginUser(
+    public ResponseEntity<?> loginUser(
             @RequestBody(description = "User login credentials", required = true)
             @org.springframework.web.bind.annotation.RequestBody UserLoginRequestDTO userLoginRequestDTO) {
         
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            userLoginRequestDTO.getEmail(),
-                            userLoginRequestDTO.getPassword()
-                    )
-            );
-
-            String token = jwtTokenProvider.generateToken(authentication);
-            UserAccount userAccount = userAccountRepository.findByEmail(userLoginRequestDTO.getEmail());
-
-            if (userAccount == null) {
-                throw new AuthenticationException("Користувача не знайдено");
-            }
-
-            Map<String, String> response = new HashMap<>();
-            response.put("token", token);
-            response.put("role", userAccount.getUserType().getName());
-            response.put("userId", String.valueOf(userAccount.getId()));
-
+            AuthResponseDTO response = authService.authenticate(userLoginRequestDTO);
             return ResponseEntity.ok(response);
         } catch (BadCredentialsException e) {
-            throw new BadCredentialsException("Неправильний email або пароль");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<?> handleBadCredentialsException(BadCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
     }
 }
