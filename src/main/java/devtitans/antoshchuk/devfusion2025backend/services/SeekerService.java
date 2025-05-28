@@ -2,7 +2,7 @@ package devtitans.antoshchuk.devfusion2025backend.services;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserSeekerRegisterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.SeekerRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.SeekerRepository;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.SeekerMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,69 +1,158 @@
 package devtitans.antoshchuk.devfusion2025backend.controllers;
 
-import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyBaseResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.request.JobPostFilterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostDetailedResponseDTO;
-import devtitans.antoshchuk.devfusion2025backend.services.CompanyService;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.services.JobPostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/jobs")
-@Tag(name = "Job Posts", description = "Endpoints for managing job posts and retrieving job-related information")
+@RequestMapping("/api/v1/job-posts")
+@Tag(name = "Job Posts", description = "API for managing job posts - search, filtering, and details retrieval")
 public class JobPostController {
+
     private final JobPostService jobPostService;
-    private final CompanyService companyService;
 
     @Autowired
-    public JobPostController(JobPostService jobPostService, CompanyService companyService) {
+    public JobPostController(JobPostService jobPostService) {
         this.jobPostService = jobPostService;
-        this.companyService = companyService;
     }
 
+    @GetMapping
     @Operation(
-        summary = "Get all job posts with pagination",
-        description = "Retrieves a list of all job posts with basic company information, paginated for better performance"
+        summary = "Get list of job posts",
+        description = """
+            Returns a paginated and filtered list of job posts. Supports comprehensive filtering and sorting options.
+            
+            Filtering options:
+            - Search by title and description
+            - Filter by location
+            - Filter by company
+            - Filter by job type (FULL_TIME, PART_TIME, CONTRACT, etc.)
+            - Filter by experience level (JUNIOR, MIDDLE, SENIOR)
+            - Filter by active status
+            
+            Sorting options:
+            - createdDateTime (default)
+            - title
+            - location
+            - company.name
+            
+            Pagination:
+            - Default page size: 6 items
+            - Page numbering starts from 0
+            
+            Example requests:
+            1. Basic: GET /api/v1/job-posts
+            2. With filters: GET /api/v1/job-posts?searchQuery=java&location=London&jobType=FULL_TIME
+            3. With sorting: GET /api/v1/job-posts?sortBy=createdDateTime&sortDirection=DESC
+            4. With pagination: GET /api/v1/job-posts?page=0&size=10
+            """
     )
     @ApiResponses(value = {
         @ApiResponse(
             responseCode = "200",
-            description = "Successfully retrieved the list of job posts",
+            description = "Successfully retrieved list of job posts",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = CompanyBaseResponseDTO.class)
+                schema = @Schema(implementation = Page.class),
+                examples = @ExampleObject(value = """
+                    {
+                      "content": [
+                        {
+                          "id": 1,
+                          "title": "Senior Java Developer",
+                          "description": "We are looking for an experienced Java developer...",
+                          "location": "London, UK",
+                          "requirements": "- 5+ years of Java experience\\n- Spring Framework knowledge",
+                          "company": {
+                            "id": 1,
+                            "name": "Tech Solutions Ltd",
+                            "logo": "https://example.com/logo.png"
+                          }
+                        }
+                      ],
+                      "pageable": {
+                        "pageNumber": 0,
+                        "pageSize": 6,
+                        "sort": {
+                          "sorted": true,
+                          "direction": "DESC",
+                          "property": "createdDateTime"
+                        }
+                      },
+                      "totalElements": 100,
+                      "totalPages": 17,
+                      "last": false,
+                      "first": true,
+                      "empty": false
+                    }
+                    """)
             )
         ),
         @ApiResponse(
             responseCode = "400",
-            description = "Invalid pagination parameters",
-            content = @Content(schema = @Schema(hidden = true))
+            description = "Invalid request parameters",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = "{\"error\":\"Bad Request\",\"message\":\"Invalid sort field: invalidField\"}"
+                )
+            )
         )
     })
-    @GetMapping("/all")
-    public ResponseEntity<List<CompanyBaseResponseDTO>> getAllJobPosts(
-        @Parameter(description = "Page number (zero-based)", example = "0")
-        @RequestParam(defaultValue = "0") int page,
-        
-        @Parameter(description = "Number of items per page", example = "10")
-        @RequestParam(defaultValue = "10") int size
+    public ResponseEntity<Page<JobPostResponseDTO>> getAllJobPosts(
+        @Parameter(
+            description = """
+                Filter and sorting parameters:
+                
+                searchQuery: Search in title and description
+                location: Filter by job location (e.g., 'London', 'Remote')
+                companyId: Filter by specific company
+                jobType: Filter by job type (FULL_TIME, PART_TIME, CONTRACT, FREELANCE, INTERNSHIP)
+                gradation: Filter by experience level (JUNIOR, MIDDLE, SENIOR, LEAD)
+                isActive: Filter by vacancy status (true/false)
+                sortBy: Field to sort by (createdDateTime, title, location, company.name)
+                sortDirection: Sort direction (ASC, DESC)
+                page: Page number (starts from 0)
+                size: Number of items per page (default: 6)
+                """,
+            schema = @Schema(implementation = JobPostFilterRequestDTO.class),
+            examples = {
+                @ExampleObject(
+                    name = "Basic filter",
+                    value = "searchQuery=java&location=London"
+                ),
+                @ExampleObject(
+                    name = "Advanced filter",
+                    value = "jobType=FULL_TIME&gradation=SENIOR&isActive=true"
+                ),
+                @ExampleObject(
+                    name = "Sorting and pagination",
+                    value = "sortBy=createdDateTime&sortDirection=DESC&page=0&size=10"
+                )
+            }
+        )
+        JobPostFilterRequestDTO filterRequest
     ) {
-        return ResponseEntity.ok(companyService.getAllCompaniesBaseInfoDTOs());
+        return ResponseEntity.ok(jobPostService.getFilteredJobPosts(filterRequest));
     }
 
+    @GetMapping("/{id}")
     @Operation(
-        summary = "Get detailed job post information",
-        description = "Returns comprehensive information about a specific job post including company details, " +
-                     "location, employment type, required experience, and other relevant details"
+        summary = "Get job post details",
+        description = "Returns detailed information about a specific job post by its ID"
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -80,17 +169,19 @@ public class JobPostController {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(
-                    example = "{\"error\":\"Not Found\",\"message\":\"Вакансію не знайдено\"}"
+                    example = "{\"error\":\"Not Found\",\"message\":\"Job post not found\"}"
                 )
             )
         )
     })
-    @GetMapping("/{id}")
     public ResponseEntity<JobPostDetailedResponseDTO> getJobPostDetails(
-        @Parameter(description = "ID of the job post to retrieve", required = true, example = "1")
+        @Parameter(
+            description = "Job post ID",
+            required = true,
+            example = "1"
+        )
         @PathVariable Integer id
     ) {
-        JobPostDetailedResponseDTO jobPost = jobPostService.getJobPostDetails(id);
-        return ResponseEntity.ok(jobPost);
+        return ResponseEntity.ok(jobPostService.getJobPostDetails(id));
     }
 }

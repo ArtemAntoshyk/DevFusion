@@ -66,4 +66,5 @@ public class JobPost {
 
     @OneToMany(mappedBy = "jobPost")
     private List<JobPostActivity> jobPostActivities;
+
 }

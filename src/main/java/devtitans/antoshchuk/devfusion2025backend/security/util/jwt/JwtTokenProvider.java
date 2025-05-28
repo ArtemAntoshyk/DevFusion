@@ -3,7 +3,7 @@ package devtitans.antoshchuk.devfusion2025backend.security.util.jwt;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
-import devtitans.antoshchuk.devfusion2025backend.repositiories.UserAccountRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.services.CustomUserDetailsService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -37,11 +37,8 @@ public class JwtTokenProvider {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String username = userDetails.getUsername();
         
-        // Получаем свежие данные из базы
-        UserAccount userAccount = userAccountRepository.findByEmail(username);
-        if (userAccount == null) {
-            throw new RuntimeException("User not found");
-        }
+        UserAccount userAccount = userAccountRepository.findByEmail(username)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
         Claims claims = Jwts.claims().setSubject(username);
         claims.put("userId", userAccount.getId());
