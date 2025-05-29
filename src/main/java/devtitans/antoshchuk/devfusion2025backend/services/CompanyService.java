@@ -25,6 +25,12 @@ public class CompanyService {
         this.companyRepository = companyRepository;
         this.companyMapper = companyMapper;
     }
+
+    @Transactional
+    public Company save(Company company) {
+        return companyRepository.save(company);
+    }
+
     @Transactional
     public List<Company> getAllCompanies() {
         return companyRepository.findAll();
@@ -51,7 +57,6 @@ public class CompanyService {
                 .map(company -> companyMapper.toBaseDTO(company))
                 .toList();
     }
-
 
     public PaginatedCompanyResponseDTO getFilteredCompanies(Pageable pageable, String search, String businessStream) {
         Page<Company> companyPage = companyRepository.findFilteredCompanies(search, businessStream, pageable);
