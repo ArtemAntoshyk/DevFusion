@@ -179,28 +179,202 @@ src/main/java/devtitans/antoshchuk/devfusion2025backend/
 ### Authentication
 ```
 POST /api/auth/register - Register new user (seeker or company)
+Description: Registers a job seeker or a company and logs them in automatically.
+
+Responses:
+- 200: User successfully registered and authenticated
+- 400: Invalid registration data
+- 409: User already exists
+
 POST /api/auth/login - User login
+Description: Logs in a user by verifying email and password.
+
+Responses:
+- 200: Login successful
+- 401: Invalid login credentials
 ```
 
 ### User Management
 ```
-GET /api/user/me - Get current user data
+GET /api/v1/user/me - Get current user profile
+Description: Returns information about the currently authenticated user based on their JWT token
+
+Responses:
+- 200: Successfully retrieved user profile
+  Content: UserDataResponseDTO
+- 401: Unauthorized - Invalid or missing token
+- 404: User not found
 ```
 
 ### Company Management
 ```
-GET /api/v1/companies - Get all companies (basic info)
+GET /api/v1/companies - Get all companies with basic information
+Description: Returns a list of all companies with their basic information
+
+Responses:
+- 200: Successfully retrieved companies
+  Content: List<CompanyBaseResponseDTO>
+
 GET /api/v1/companies/with-posts - Get all companies with their job posts
-GET /api/v1/companies/{id} - Get detailed company information
-GET /api/v1/companies/{id}/with-posts - Get company with its job posts
-GET /api/v1/companies/search - Search companies with filters
+Description: Returns a list of all companies including their job posts
+
+Responses:
+- 200: Successfully retrieved companies with posts
+  Content: List<CompanyWithPostsResponseDTO>
+
+GET /api/v1/companies/{id} - Get company by ID with all information
+Description: Returns detailed information about a specific company
+
+Responses:
+- 200: Successfully retrieved company
+  Content: CompanyAllInfoResponseDTO
+- 404: Company not found
+
+GET /api/v1/companies/{id}/with-posts - Get company by ID with its job posts
+Description: Returns detailed information about a specific company including its job posts
+
+Responses:
+- 200: Successfully retrieved company with posts
+  Content: CompanyWithPostsResponseDTO
+- 404: Company not found
+
+GET /api/v1/companies/search - Search and filter companies with pagination
+Description: Search and filter companies with pagination support
+
+Parameters:
+- page: Page number (0-based)
+- size: Page size (default: 10)
+- search: Search term for company name
+- businessStream: Business stream filter
+
+Responses:
+- 200: Successfully retrieved filtered companies
+  Content: PaginatedCompanyResponseDTO
+
 DELETE /api/v1/companies/{id} - Delete a company
+Description: Deletes a company by its ID
+
+Responses:
+- 204: Company successfully deleted
+- 404: Company not found
+```
+
+### Company Profile
+```
+GET /api/v1/companies/me - Get authenticated company profile
+Description: Retrieves the complete profile of the currently authenticated company
+
+Authentication: Required (Bearer token)
+
+Responses:
+- 200: Successfully retrieved company profile
+  Content: CompanyProfileResponseDTO
+- 401: Unauthorized - Invalid or missing token
+- 403: Forbidden - User is not a company
+- 404: Company profile not found
+
+PUT /api/v1/companies/me - Update company profile
+Description: Updates the profile of the currently authenticated company
+
+Authentication: Required (Bearer token)
+
+Request Body:
+{
+    "name": "New Company Name",
+    "businessStreamName": "IT Services",
+    "companyLogo": "https://example.com/logo.png",
+    "companyDescription": "Updated company description",
+    "companyWebsiteUrl": "https://company.com",
+    "establishmentDate": "2020-01-01",
+    "companyImages": [
+        "https://example.com/image1.jpg",
+        "https://example.com/image2.jpg"
+    ],
+    "email": "new.email@company.com",
+    "contactNumber": "+380501234567"
+}
+
+Field Validations:
+- name: 2-100 characters
+- businessStreamName: 2-100 characters
+- companyLogo: max 500 characters, valid URL
+- companyDescription: max 2000 characters
+- companyWebsiteUrl: max 500 characters, valid URL format
+- establishmentDate: valid date in YYYY-MM-DD format
+- companyImages: array of valid image URLs
+- email: valid email format, max 100 characters
+- contactNumber: international format (e.g., +380501234567), 10-15 digits
+
+Responses:
+- 200: Company profile updated successfully
+- 400: Invalid request data
+- 401: Unauthorized - Invalid or missing token
+- 403: Forbidden - User is not a company
+- 404: Company profile not found
+- 409: Email already exists
+```
+
+### Company Statistics
+```
+GET /api/v1/statistics/companies/top-with-vacancies - Get top companies with their vacancies
+Description: Returns a list of top companies along with their most recent job posts. Companies are ranked based on their total number of vacancies.
+
+Authentication: Required (Bearer token)
+
+Responses:
+- 200: Successfully retrieved top companies
+  Content: List<CompanyWithVacanciesDTO>
+- 401: Unauthorized - Invalid or missing token
 ```
 
 ### Job Posts
 ```
-GET /api/jobs/all - Get all job posts (paginated)
-GET /api/jobs/{id} - Get detailed job post information
+GET /api/v1/job-posts - Get list of job posts
+Description: Returns a paginated and filtered list of job posts. Supports comprehensive filtering and sorting options.
+
+Filtering Options:
+- searchQuery: Search in title and description
+- location: Filter by job location (e.g., 'London', 'Remote')
+- companyId: Filter by specific company
+- jobType: Filter by job type (FULL_TIME, PART_TIME, CONTRACT, FREELANCE, INTERNSHIP)
+- gradation: Filter by experience level (JUNIOR, MIDDLE, SENIOR, LEAD)
+- isActive: Filter by vacancy status (true/false)
+
+Sorting Options:
+- createdDateTime (default)
+- title
+- location
+- company.name
+
+Pagination:
+- Default page size: 6 items
+- Page numbering starts from 0
+
+Example Requests:
+1. Basic: GET /api/v1/job-posts
+2. With filters: GET /api/v1/job-posts?searchQuery=java&location=London&jobType=FULL_TIME
+3. With sorting: GET /api/v1/job-posts?sortBy=createdDateTime&sortDirection=DESC
+4. With pagination: GET /api/v1/job-posts?page=0&size=10
+
+Responses:
+- 200: Successfully retrieved list of job posts
+  Content: Page<JobPostResponseDTO>
+- 400: Invalid request parameters
+
+GET /api/v1/job-posts/{id} - Get job post details
+Description: Returns detailed information about a specific job post by its ID
+
+Responses:
+- 200: Successfully retrieved job post details
+  Content: JobPostDetailedResponseDTO
+- 404: Job post not found
+
+GET /api/v1/job-posts/search - Search job posts
+Description: Search job posts with filters and save search history for authenticated users
+
+Responses:
+- 200: Successfully retrieved filtered job posts
+  Content: Page<JobPostResponseDTO>
 ```
 
 ## Security Implementation
@@ -210,6 +384,30 @@ The project implements JWT-based authentication with the following features:
 - Role-based access control
 - Secure password handling
 - API endpoint protection
+
+### Authentication Flow
+1. User registers or logs in
+2. Server validates credentials and returns JWT token
+3. Client includes token in Authorization header for subsequent requests
+4. Server validates token and grants access to protected resources
+
+### Error Responses
+All endpoints return standardized error responses in the following format:
+```json
+{
+    "success": false,
+    "message": "Error description",
+    "data": null
+}
+```
+
+### Common HTTP Status Codes
+- 200: Success
+- 400: Bad Request (validation errors)
+- 401: Unauthorized (invalid/missing token)
+- 403: Forbidden (insufficient permissions)
+- 404: Not Found
+- 409: Conflict (e.g., email already exists)
 
 ## Build and Deployment
 

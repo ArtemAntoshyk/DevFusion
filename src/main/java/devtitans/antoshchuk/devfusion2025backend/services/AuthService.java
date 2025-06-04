@@ -123,27 +123,49 @@ public class AuthService {
     }
 
     public AuthResponseDTO register(UserRegisterRequestDTO request) {
-        if (userAccountRepository.findByEmail(request.getUser().getEmail()) != null) {
+        if (userAccountRepository.findByEmail(request.getUser().getEmail()).isPresent()) {
             throw new RuntimeException("User already exists");
         }
 
         UserAccount userAccount = new UserAccount();
         userAccount.setEmail(request.getUser().getEmail());
         userAccount.setPassword(passwordEncoder.encode(request.getUser().getPassword()));
+        userAccount.setContactNumber(request.getUser().getContactNumber());
         
-        UserAccount savedUser = userAccountRepository.save(userAccount);
+        // Determine user type based on request
+        if (request.getSeeker() != null) {
+            userAccount.setUserType(userTypeService.getUserTypeByName(UserTypes.SEEKER));
+            UserAccount savedUser = userAccountRepository.save(userAccount);
+            Seeker seeker = modelMapper.map(request.getSeeker(), Seeker.class);
+            seeker.setUserAccount(savedUser);
+            savedUser.setSeeker(seeker);
+            seekerRepository.save(seeker);
+            userAccount = userAccountRepository.save(savedUser);
+        } else if (request.getCompany() != null) {
+            userAccount.setUserType(userTypeService.getUserTypeByName(UserTypes.COMPANY));
+            UserAccount savedUser = userAccountRepository.save(userAccount);
+            Company company = modelMapper.map(request.getCompany(), Company.class);
+            company.setUser(savedUser);
+            companyRepository.save(company);
+            userAccount = savedUser;
+        } else {
+            throw new ValidationException("User type must be specified (seeker or company)");
+        }
 
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
+        // Create authentication token
+        Authentication authentication = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
                 request.getUser().getEmail(),
                 request.getUser().getPassword()
+            )
         );
 
         String token = jwtTokenProvider.generateToken(authentication);
 
         AuthResponseDTO response = new AuthResponseDTO();
         response.setToken(token);
-        response.setRole(savedUser.getUserType().getName());
-        response.setUserId(Long.valueOf(savedUser.getId()));
+        response.setRole(userAccount.getUserType().getName());
+        response.setUserId(Long.valueOf(userAccount.getId()));
         return response;
     }
 

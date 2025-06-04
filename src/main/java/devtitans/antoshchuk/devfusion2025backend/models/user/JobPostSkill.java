@@ -1,5 +1,6 @@
 package devtitans.antoshchuk.devfusion2025backend.models.user;
 
+import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,4 +22,13 @@ public class JobPostSkill {
     @ManyToOne
     @JoinColumn(name = "skill_set_id", referencedColumnName = "id")
     private Skill skill;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_post_id")
+    private JobPost jobPost;
+
+
+    @Column(name = "skill_level")
+    private Integer skillLevel;
+
 }

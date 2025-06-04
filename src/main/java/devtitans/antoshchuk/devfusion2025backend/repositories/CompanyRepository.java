@@ -39,4 +39,10 @@ public interface CompanyRepository extends JpaRepository<Company, Integer>, JpaS
            ORDER BY COUNT(jp) DESC
            """)
     List<Object[]> findTopCompaniesByVacancyCount(@Param("limit") int limit);
+
+    @Query("SELECT DISTINCT c FROM Company c " +
+           "LEFT JOIN FETCH c.jobPosts jp " +
+           "LEFT JOIN FETCH c.user u " +
+           "ORDER BY c.id")
+    List<Company> findAll();
 } 

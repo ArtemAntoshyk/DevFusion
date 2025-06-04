@@ -1,6 +1,9 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.CompanyWithVacanciesDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.RequiredExperienceDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.TagDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.JobPostSkillDTO;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Company;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.repositories.CompanyRepository;
@@ -36,9 +39,29 @@ public class CompanyStatisticsService {
                                     .map(post -> CompanyWithVacanciesDTO.VacancyDTO.builder()
                                             .id(post.getId().longValue())
                                             .title(post.getTitle())
+                                            .titleEn(post.getTitleEn())
                                             .employmentType(post.getJobType().getName())
                                             .location(post.getJobLocation())
-                                            .shortDescription(truncateDescription(post.getJobDescription(), 20))
+                                            .shortDescription(truncateDescription(post.getJobDescription(), 200))
+                                            .shortDescriptionEn(truncateDescription(post.getJobDescriptionEn(), 200))
+                                            .requiredExperience(post.getExperience() != null ? RequiredExperienceDTO.builder()
+                                                    .id(post.getExperience().getId())
+                                                    .experience(post.getExperience().getExperience())
+                                                    .build() : null)
+                                            .tags(post.getTags().stream()
+                                                    .<TagDTO>map(tag -> TagDTO.builder()
+                                                            .id(tag.getId())
+                                                            .name(tag.getName())
+                                                            .build())
+                                                    .collect(Collectors.toSet()))
+                                            .skills(post.getJobPostSkillSets().stream()
+                                                    .<JobPostSkillDTO>map(skill -> JobPostSkillDTO.builder()
+                                                            .id(skill.getSkill().getId())
+                                                            .name(skill.getSkill().getName())
+                                                            .level(skill.getSkillLevel())
+                                                            .build())
+                                                    .collect(Collectors.toSet()))
+                                            .language(post.getLanguage())
                                             .build())
                                     .collect(Collectors.toList()))
                             .build();

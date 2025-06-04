@@ -45,7 +45,9 @@ public class CompanyService {
 
     @Transactional
     public List<CompanyWithPostsResponseDTO> getAllCompaniesWithPostsDTOs() {
-        List<Company> companies = getAllCompanies();
+        List<Company> companies = companyRepository.findAll().stream()
+                .distinct()
+                .toList();
         return companies.stream()
                 .map(company -> companyMapper.companyToCompanyWithPostsResponseDTO(company))
                 .toList();

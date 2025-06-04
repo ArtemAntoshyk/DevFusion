@@ -3,7 +3,9 @@ package devtitans.antoshchuk.devfusion2025backend.controllers;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.JobPostFilterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostDetailedResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
 import devtitans.antoshchuk.devfusion2025backend.services.JobPostService;
+import devtitans.antoshchuk.devfusion2025backend.services.JobViewHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,18 +17,42 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/job-posts")
-@Tag(name = "Job Posts", description = "API for managing job posts - search, filtering, and details retrieval")
+@Tag(
+    name = "Job Posts",
+    description = """
+        API for managing job posts - search, filtering, and details retrieval.
+        
+        ## Authentication
+        Some endpoints require a valid JWT token in the Authorization header:
+        ```
+        Authorization: Bearer <your_jwt_token>
+        ```
+        
+        ## Error Responses
+        All endpoints return standardized error responses in the following format:
+        ```json
+        {
+            "success": false,
+            "message": "Error description",
+            "data": null
+        }
+        ```
+        """
+)
 public class JobPostController {
 
     private final JobPostService jobPostService;
+    private final JobViewHistoryService jobViewHistoryService;
 
     @Autowired
-    public JobPostController(JobPostService jobPostService) {
+    public JobPostController(JobPostService jobPostService, JobViewHistoryService jobViewHistoryService) {
         this.jobPostService = jobPostService;
+        this.jobViewHistoryService = jobViewHistoryService;
     }
 
     @GetMapping
@@ -35,29 +61,67 @@ public class JobPostController {
         description = """
             Returns a paginated and filtered list of job posts. Supports comprehensive filtering and sorting options.
             
-            Filtering options:
-            - Search by title and description
-            - Filter by location
-            - Filter by company
-            - Filter by job type (FULL_TIME, PART_TIME, CONTRACT, etc.)
-            - Filter by experience level (JUNIOR, MIDDLE, SENIOR)
-            - Filter by active status
+            ## Filtering Options
+            - searchQuery: Search in title and description
+            - location: Filter by job location (e.g., 'London', 'Remote')
+            - companyId: Filter by specific company
+            - jobType: Filter by job type (FULL_TIME, PART_TIME, CONTRACT, FREELANCE, INTERNSHIP)
+            - gradation: Filter by experience level (JUNIOR, MIDDLE, SENIOR, LEAD)
+            - isActive: Filter by vacancy status (true/false)
             
-            Sorting options:
+            ## Sorting Options
             - createdDateTime (default)
             - title
             - location
             - company.name
             
-            Pagination:
+            ## Pagination
             - Default page size: 6 items
             - Page numbering starts from 0
             
-            Example requests:
+            ## Example Requests
             1. Basic: GET /api/v1/job-posts
             2. With filters: GET /api/v1/job-posts?searchQuery=java&location=London&jobType=FULL_TIME
             3. With sorting: GET /api/v1/job-posts?sortBy=createdDateTime&sortDirection=DESC
             4. With pagination: GET /api/v1/job-posts?page=0&size=10
+            
+            ## Response Format
+            ```json
+            {
+                "success": true,
+                "message": "Job posts retrieved successfully",
+                "data": {
+                    "content": [
+                        {
+                            "id": 1,
+                            "title": "Senior Java Developer",
+                            "description": "We are looking for an experienced Java developer...",
+                            "location": "London, UK",
+                            "requirements": "- 5+ years of Java experience\\n- Spring Framework knowledge",
+                            "company": {
+                                "id": 1,
+                                "name": "Tech Solutions Ltd",
+                                "logo": "https://example.com/logo.png"
+                            }
+                        }
+                    ],
+                    "pageable": {
+                        "pageNumber": 0,
+                        "pageSize": 6,
+                        "sort": {
+                            "sorted": true,
+                            "direction": "DESC",
+                            "property": "createdDateTime"
+                        }
+                    },
+                    "totalElements": 100,
+                    "totalPages": 17,
+                    "last": false,
+                    "first": true,
+                    "empty": false
+                }
+            }
+            ```
             """
     )
     @ApiResponses(value = {
@@ -67,38 +131,44 @@ public class JobPostController {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = Page.class),
-                examples = @ExampleObject(value = """
-                    {
-                      "content": [
+                examples = @ExampleObject(
+                    value = """
                         {
-                          "id": 1,
-                          "title": "Senior Java Developer",
-                          "description": "We are looking for an experienced Java developer...",
-                          "location": "London, UK",
-                          "requirements": "- 5+ years of Java experience\\n- Spring Framework knowledge",
-                          "company": {
-                            "id": 1,
-                            "name": "Tech Solutions Ltd",
-                            "logo": "https://example.com/logo.png"
-                          }
+                            "success": true,
+                            "message": "Job posts retrieved successfully",
+                            "data": {
+                                "content": [
+                                    {
+                                        "id": 1,
+                                        "title": "Senior Java Developer",
+                                        "description": "We are looking for an experienced Java developer...",
+                                        "location": "London, UK",
+                                        "requirements": "- 5+ years of Java experience\\n- Spring Framework knowledge",
+                                        "company": {
+                                            "id": 1,
+                                            "name": "Tech Solutions Ltd",
+                                            "logo": "https://example.com/logo.png"
+                                        }
+                                    }
+                                ],
+                                "pageable": {
+                                    "pageNumber": 0,
+                                    "pageSize": 6,
+                                    "sort": {
+                                        "sorted": true,
+                                        "direction": "DESC",
+                                        "property": "createdDateTime"
+                                    }
+                                },
+                                "totalElements": 100,
+                                "totalPages": 17,
+                                "last": false,
+                                "first": true,
+                                "empty": false
+                            }
                         }
-                      ],
-                      "pageable": {
-                        "pageNumber": 0,
-                        "pageSize": 6,
-                        "sort": {
-                          "sorted": true,
-                          "direction": "DESC",
-                          "property": "createdDateTime"
-                        }
-                      },
-                      "totalElements": 100,
-                      "totalPages": 17,
-                      "last": false,
-                      "first": true,
-                      "empty": false
-                    }
-                    """)
+                        """
+                )
             )
         ),
         @ApiResponse(
@@ -107,7 +177,13 @@ public class JobPostController {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(
-                    example = "{\"error\":\"Bad Request\",\"message\":\"Invalid sort field: invalidField\"}"
+                    example = """
+                        {
+                            "success": false,
+                            "message": "Invalid sort field: invalidField",
+                            "data": null
+                        }
+                        """
                 )
             )
         )
@@ -152,7 +228,40 @@ public class JobPostController {
     @GetMapping("/{id}")
     @Operation(
         summary = "Get job post details",
-        description = "Returns detailed information about a specific job post by its ID"
+        description = """
+            Returns detailed information about a specific job post by its ID.
+            
+            ## Notes
+            - If the user is authenticated, the view will be recorded in their history
+            - The response includes detailed company information
+            
+            ## Response Format
+            ```json
+            {
+                "success": true,
+                "message": "Job post details retrieved successfully",
+                "data": {
+                    "id": 1,
+                    "title": "Senior Java Developer",
+                    "description": "We are looking for an experienced Java developer...",
+                    "location": "London, UK",
+                    "requirements": "- 5+ years of Java experience\\n- Spring Framework knowledge",
+                    "company": {
+                        "id": 1,
+                        "name": "Tech Solutions Ltd",
+                        "logo": "https://example.com/logo.png",
+                        "description": "Leading technology solutions provider...",
+                        "website": "https://techsolutions.com"
+                    },
+                    "jobType": "FULL_TIME",
+                    "gradation": "SENIOR",
+                    "salary": "50000-70000",
+                    "createdDateTime": "2024-03-20T10:00:00",
+                    "isActive": true
+                }
+            }
+            ```
+            """
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -160,7 +269,34 @@ public class JobPostController {
             description = "Successfully retrieved job post details",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = JobPostDetailedResponseDTO.class)
+                schema = @Schema(implementation = JobPostDetailedResponseDTO.class),
+                examples = @ExampleObject(
+                    value = """
+                        {
+                            "success": true,
+                            "message": "Job post details retrieved successfully",
+                            "data": {
+                                "id": 1,
+                                "title": "Senior Java Developer",
+                                "description": "We are looking for an experienced Java developer...",
+                                "location": "London, UK",
+                                "requirements": "- 5+ years of Java experience\\n- Spring Framework knowledge",
+                                "company": {
+                                    "id": 1,
+                                    "name": "Tech Solutions Ltd",
+                                    "logo": "https://example.com/logo.png",
+                                    "description": "Leading technology solutions provider...",
+                                    "website": "https://techsolutions.com"
+                                },
+                                "jobType": "FULL_TIME",
+                                "gradation": "SENIOR",
+                                "salary": "50000-70000",
+                                "createdDateTime": "2024-03-20T10:00:00",
+                                "isActive": true
+                            }
+                        }
+                        """
+                )
             )
         ),
         @ApiResponse(
@@ -169,7 +305,13 @@ public class JobPostController {
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(
-                    example = "{\"error\":\"Not Found\",\"message\":\"Job post not found\"}"
+                    example = """
+                        {
+                            "success": false,
+                            "message": "Job post not found",
+                            "data": null
+                        }
+                        """
                 )
             )
         )
@@ -180,8 +322,47 @@ public class JobPostController {
             required = true,
             example = "1"
         )
-        @PathVariable Integer id
+        @PathVariable Integer id,
+        Authentication authentication
     ) {
-        return ResponseEntity.ok(jobPostService.getJobPostDetails(id));
+        JobPostDetailedResponseDTO jobPost = jobPostService.getJobPostDetails(id);
+        
+        // Save view history if user is authenticated
+        if (authentication != null && authentication.isAuthenticated()) {
+            UserAccount user = (UserAccount) authentication.getPrincipal();
+            jobViewHistoryService.saveJobView(
+                (long) user.getId(),
+                (long) id,
+                jobPost.getTitle(),
+                jobPost.getCompany().getName()
+            );
+        }
+        
+        return ResponseEntity.ok(jobPost);
+    }
+
+    @GetMapping("/search")
+    @Operation(
+        summary = "Search job posts",
+        description = "Search job posts with filters and save search history for authenticated users"
+    )
+    public ResponseEntity<Page<JobPostResponseDTO>> searchJobPosts(
+        @RequestBody JobPostFilterRequestDTO filterRequest,
+        Authentication authentication
+    ) {
+        Page<JobPostResponseDTO> result = jobPostService.getFilteredJobPosts(filterRequest);
+        
+        // Save search history if user is authenticated
+        if (authentication != null && authentication.isAuthenticated() && filterRequest.getSearchQuery() != null) {
+            UserAccount user = (UserAccount) authentication.getPrincipal();
+            jobViewHistoryService.saveJobView(
+                (long) user.getId(),
+                null,
+                filterRequest.getSearchQuery(),
+                null
+            );
+        }
+        
+        return ResponseEntity.ok(result);
     }
 }
