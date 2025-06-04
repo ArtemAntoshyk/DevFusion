@@ -26,6 +26,12 @@ public class SeekerSkillSet {
     @JoinColumn(name = "skill_set_id", referencedColumnName = "id")
     private Skill skill;
 
+    @Column(name = "skill_level")
+    private Short skillLevel;
+
+    @Column(name = "description", length = Integer.MAX_VALUE)
+    private String description;
+
     @Override
     public String toString() {
         return "SeekerSkillSet{" +

@@ -47,6 +47,9 @@ public class Seeker {
     @OneToMany(mappedBy = "seeker")
     private List<JobPostActivity> jobPostActivities;
 
+    @Column(name = "cv_url", length = Integer.MAX_VALUE)
+    private String cvUrl;
+
     public Seeker(double currentMonthlySalary, Date dateOfBirth, String lastName, String firstName) {
         this.currentMonthlySalary = currentMonthlySalary;
         this.dateOfBirth = dateOfBirth;

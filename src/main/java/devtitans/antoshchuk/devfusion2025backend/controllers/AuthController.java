@@ -10,6 +10,7 @@ import devtitans.antoshchuk.devfusion2025backend.security.util.jwt.JwtTokenProvi
 import devtitans.antoshchuk.devfusion2025backend.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,7 +32,22 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Authentication", description = "Endpoints for user registration and login")
+@Tag(
+    name = "Authentication",
+    description = """
+        Endpoints for user registration and login.
+        
+        ## Error Responses
+        All endpoints return standardized error responses in the following format:
+        ```json
+        {
+            "success": false,
+            "message": "Error description",
+            "data": null
+        }
+        ```
+        """
+)
 public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
@@ -51,11 +67,95 @@ public class AuthController {
         this.userAccountRepository = userAccountRepository;
     }
 
-    @Operation(summary = "Register a new user", description = "Registers a job seeker or a company and logs them in automatically.")
+    @Operation(
+        summary = "Register a new user",
+        description = """
+            Registers a job seeker or a company and logs them in automatically.
+            
+            ## Request Format
+            ```json
+            {
+                "email": "user@example.com",
+                "password": "securePassword123",
+                "userType": "SEEKER",
+                "contactNumber": "+380501234567"
+            }
+            ```
+            
+            ## Field Validations
+            - email: valid email format, max 100 characters
+            - password: min 8 characters, must contain letters and numbers
+            - userType: must be either "SEEKER" or "COMPANY"
+            - contactNumber: international format (e.g., +380501234567), 10-15 digits
+            
+            ## Response Format
+            ```json
+            {
+                "success": true,
+                "message": "User registered successfully",
+                "data": {
+                    "token": "jwt_token",
+                    "userType": "SEEKER",
+                    "email": "user@example.com"
+                }
+            }
+            ```
+            """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User successfully registered and authenticated"),
-            @ApiResponse(responseCode = "400", description = "Invalid registration data"),
-            @ApiResponse(responseCode = "409", description = "User already exists")
+        @ApiResponse(
+            responseCode = "200",
+            description = "User successfully registered and authenticated",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = AuthResponseDTO.class),
+                examples = @ExampleObject(
+                    value = """
+                        {
+                            "success": true,
+                            "message": "User registered successfully",
+                            "data": {
+                                "token": "jwt_token",
+                                "userType": "SEEKER",
+                                "email": "user@example.com"
+                            }
+                        }
+                        """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Invalid registration data",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                        {
+                            "success": false,
+                            "message": "Invalid registration data: [field] [error description]",
+                            "data": null
+                        }
+                        """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description = "User already exists",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                        {
+                            "success": false,
+                            "message": "User already exists",
+                            "data": null
+                        }
+                        """
+                )
+            )
+        )
     })
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(
@@ -69,10 +169,71 @@ public class AuthController {
         }
     }
 
-    @Operation(summary = "Authenticate a user", description = "Logs in a user by verifying email and password.")
+    @Operation(
+        summary = "Authenticate a user",
+        description = """
+            Logs in a user by verifying email and password.
+            
+            ## Request Format
+            ```json
+            {
+                "email": "user@example.com",
+                "password": "securePassword123"
+            }
+            ```
+            
+            ## Response Format
+            ```json
+            {
+                "success": true,
+                "message": "Login successful",
+                "data": {
+                    "token": "jwt_token",
+                    "userType": "SEEKER",
+                    "email": "user@example.com"
+                }
+            }
+            ```
+            """
+    )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Login successful"),
-            @ApiResponse(responseCode = "401", description = "Invalid login credentials")
+        @ApiResponse(
+            responseCode = "200",
+            description = "Login successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = AuthResponseDTO.class),
+                examples = @ExampleObject(
+                    value = """
+                        {
+                            "success": true,
+                            "message": "Login successful",
+                            "data": {
+                                "token": "jwt_token",
+                                "userType": "SEEKER",
+                                "email": "user@example.com"
+                            }
+                        }
+                        """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Invalid login credentials",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(
+                    example = """
+                        {
+                            "success": false,
+                            "message": "Invalid credentials",
+                            "data": null
+                        }
+                        """
+                )
+            )
+        )
     })
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(

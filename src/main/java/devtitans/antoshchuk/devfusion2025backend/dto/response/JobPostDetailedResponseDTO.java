@@ -1,10 +1,14 @@
 package devtitans.antoshchuk.devfusion2025backend.dto.response;
 
+import devtitans.antoshchuk.devfusion2025backend.dto.JobPostSkillDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.RequiredExperienceDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.TagDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.Date;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -52,4 +56,13 @@ public class JobPostDetailedResponseDTO {
 
     @Schema(description = "Detailed company information")
     private CompanyDetailsDTO company;
+
+    @Schema(description = "Required experience")
+    private RequiredExperienceDTO requiredExperience;
+
+    @Schema(description = "Tags")
+    private Set<TagDTO> tags;
+
+    @Schema(description = "Skills")
+    private Set<JobPostSkillDTO> skills;
 } 

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,28 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/user")
-@Tag(name = "User Profile", description = "Endpoints for managing user profile and retrieving user information")
+@Tag(
+    name = "User Profile",
+    description = """
+        Endpoints for managing user profile and retrieving user information.
+        
+        ## Authentication
+        All endpoints require a valid JWT token in the Authorization header:
+        ```
+        Authorization: Bearer <your_jwt_token>
+        ```
+        
+        ## Error Responses
+        All endpoints return standardized error responses in the following format:
+        ```json
+        {
+            "success": false,
+            "message": "Error description",
+            "data": null
+        }
+        ```
+        """
+)
 @SecurityRequirement(name = "bearerAuth")
 @RequiredArgsConstructor
 public class UserController {
@@ -34,7 +56,33 @@ public class UserController {
     @GetMapping("/me")
     @Operation(
         summary = "Get current user profile",
-        description = "Returns information about the currently authenticated user based on their JWT token"
+        description = """
+            Returns information about the currently authenticated user based on their JWT token.
+            
+            ## Response Format
+            ```json
+            {
+                "success": true,
+                "message": "User profile retrieved successfully",
+                "data": {
+                    "id": 1,
+                    "email": "user@example.com",
+                    "contactNumber": "+380501234567",
+                    "userType": "SEEKER",
+                    "fullName": "John Doe",
+                    "userImage": "https://example.com/profile.jpg",
+                    "active": true,
+                    "emailNotificationActive": true,
+                    "registrationDate": "2024-01-01T00:00:00"
+                }
+            }
+            ```
+            
+            ## Notes
+            - The response includes all user information except the password
+            - For seekers, additional profile information is included
+            - For companies, company profile information is included
+            """
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -42,7 +90,26 @@ public class UserController {
             description = "Successfully retrieved user profile",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = UserDataResponseDTO.class)
+                schema = @Schema(implementation = UserDataResponseDTO.class),
+                examples = @ExampleObject(
+                    value = """
+                        {
+                            "success": true,
+                            "message": "User profile retrieved successfully",
+                            "data": {
+                                "id": 1,
+                                "email": "user@example.com",
+                                "contactNumber": "+380501234567",
+                                "userType": "SEEKER",
+                                "fullName": "John Doe",
+                                "userImage": "https://example.com/profile.jpg",
+                                "active": true,
+                                "emailNotificationActive": true,
+                                "registrationDate": "2024-01-01T00:00:00"
+                            }
+                        }
+                        """
+                )
             )
         ),
         @ApiResponse(
@@ -50,7 +117,15 @@ public class UserController {
             description = "Unauthorized - Invalid or missing token",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(example = "{\"error\":\"Unauthorized\",\"message\":\"Invalid or missing token\"}")
+                schema = @Schema(
+                    example = """
+                        {
+                            "success": false,
+                            "message": "Unauthorized - Invalid or missing token",
+                            "data": null
+                        }
+                        """
+                )
             )
         ),
         @ApiResponse(
@@ -58,7 +133,15 @@ public class UserController {
             description = "User not found",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(example = "{\"error\":\"Not Found\",\"message\":\"User not found\"}")
+                schema = @Schema(
+                    example = """
+                        {
+                            "success": false,
+                            "message": "User not found",
+                            "data": null
+                        }
+                        """
+                )
             )
         )
     })
