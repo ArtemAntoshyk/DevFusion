@@ -21,6 +21,9 @@ public interface CompanyRepository extends JpaRepository<Company, Integer>, JpaS
     @Query("SELECT DISTINCT c FROM Company c LEFT JOIN FETCH c.user WHERE 1=1")
     List<Company> findAllCompaniesBasic();
 
+    @Query("SELECT DISTINCT c FROM Company c LEFT JOIN FETCH c.user u WHERE u.id = :userId")
+    Company findByUserId(@Param("userId") int userId);
+
     @Query(value = "SELECT DISTINCT c FROM Company c LEFT JOIN FETCH c.user " +
            "WHERE (:search IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
            "AND (:businessStream IS NULL OR LOWER(c.businessStreamName) = LOWER(:businessStream))")
