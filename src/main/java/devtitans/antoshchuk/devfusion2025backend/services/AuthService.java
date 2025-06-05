@@ -1,6 +1,7 @@
 package devtitans.antoshchuk.devfusion2025backend.services;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserAccountDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.request.UserCompanyRegisterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserLoginRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserRegisterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.AuthResponseDTO;
@@ -25,6 +26,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -72,12 +75,28 @@ public class AuthService {
     }
 
     private void validateCompany(UserRegisterRequestDTO userRegisterRequestDTO) {
-        if (userRegisterRequestDTO.getCompany() == null) {
-            throw new ValidationException("Дані компанії не можуть бути порожніми");
+        if (userRegisterRequestDTO == null) {
+            throw new ValidationException("Request data cannot be null");
         }
-        if (userRegisterRequestDTO.getCompany().getName() == null || 
-            userRegisterRequestDTO.getCompany().getName().trim().isEmpty()) {
-            throw new ValidationException("Назва компанії не може бути порожньою");
+        if (userRegisterRequestDTO.getUser() == null) {
+            throw new ValidationException("User data cannot be null");
+        }
+        if (userRegisterRequestDTO.getCompany() == null) {
+            throw new ValidationException("Company data cannot be null");
+        }
+        
+        UserCompanyRegisterRequestDTO company = userRegisterRequestDTO.getCompany();
+        if (company.getName() != null && company.getName().trim().length() < 2) {
+            throw new ValidationException("Company name must be at least 2 characters long");
+        }
+        if (company.getName() != null && company.getName().trim().length() > 100) {
+            throw new ValidationException("Company name must not exceed 100 characters");
+        }
+        if (company.getBusinessStreamName() != null && company.getBusinessStreamName().trim().length() < 2) {
+            throw new ValidationException("Business stream name must be at least 2 characters long");
+        }
+        if (company.getBusinessStreamName() != null && company.getBusinessStreamName().trim().length() > 100) {
+            throw new ValidationException("Business stream name must not exceed 100 characters");
         }
     }
 
@@ -116,10 +135,25 @@ public class AuthService {
         validateCompany(userRegisterRequestDTO);
         
         UserAccount userAccount = registerUser(userRegisterRequestDTO.getUser(), UserTypes.COMPANY);
+        
+        // Create company
         Company company = modelMapper.map(userRegisterRequestDTO.getCompany(), Company.class);
+        
+        // Validate required fields
+        if (company.getName() == null || company.getName().trim().isEmpty()) {
+            throw new ValidationException("Company name is required");
+        }
+        if (company.getBusinessStreamName() == null || company.getBusinessStreamName().trim().isEmpty()) {
+            throw new ValidationException("Business stream name is required");
+        }
+        
+        // Set up bidirectional relationship
         company.setUser(userAccount);
-        companyRepository.save(company);
-        return userAccount;
+        userAccount.setCompany(company);
+        
+        // Save both entities
+        company = companyRepository.save(company);
+        return userAccountRepository.save(userAccount);
     }
 
     public AuthResponseDTO register(UserRegisterRequestDTO request) {

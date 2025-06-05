@@ -258,66 +258,62 @@ public class CompanyController {
     @DeleteMapping("/{id}")
     @Operation(
         summary = "Delete a company",
-        description = """
-            Deletes a company by its ID.
-            
-            ## Notes
-            - Requires authentication
-            - Only company owners can delete their own company
-            - This action cannot be undone
-            """
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "204",
-            description = "Company successfully deleted"
-        ),
-        @ApiResponse(
-            responseCode = "401",
-            description = "Unauthorized - Invalid or missing token",
-            content = @Content(
-                schema = @Schema(
-                    example = """
+        description = "Deletes a company by its ID. Requires authentication. Only company owners can delete their own company. This action cannot be undone.",
+        responses = {
+            @ApiResponse(
+                responseCode = "204",
+                description = "Company successfully deleted"
+            ),
+            @ApiResponse(
+                responseCode = "401",
+                description = "Unauthorized - Invalid or missing token",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
                         {
                             "success": false,
                             "message": "Unauthorized - Invalid or missing token",
                             "data": null
                         }
                         """
+                    )
                 )
-            )
-        ),
-        @ApiResponse(
-            responseCode = "403",
-            description = "Forbidden - Not authorized to delete this company",
-            content = @Content(
-                schema = @Schema(
-                    example = """
+            ),
+            @ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - Not authorized to delete this company",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
                         {
                             "success": false,
                             "message": "Forbidden - Not authorized to delete this company",
                             "data": null
                         }
                         """
+                    )
                 )
-            )
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Company not found",
-            content = @Content(
-                schema = @Schema(
-                    example = """
+            ),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Company not found",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
                         {
                             "success": false,
                             "message": "Company not found",
                             "data": null
                         }
                         """
+                    )
                 )
             )
-        )
-    })
+        }
+    )
     public ResponseEntity<Void> deleteCompany(
             @Parameter(description = "Company ID") @PathVariable int id) {
         companyService.deleteCompany(id);

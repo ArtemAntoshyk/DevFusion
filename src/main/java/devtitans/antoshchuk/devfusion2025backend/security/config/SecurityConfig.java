@@ -44,7 +44,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
-                        .anyRequest().permitAll()  // Allow all requests without authentication
+                        .requestMatchers(HttpMethod.GET, "/api/v1/job-posts", "/api/v1/job-posts/**").permitAll()
+                        .requestMatchers("/api/v1/profile/companies/me").authenticated()
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

@@ -1,20 +1,27 @@
 package devtitans.antoshchuk.devfusion2025backend.security.detail;
 
-
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
 
+@Slf4j
 public class CustomUserDetails implements UserDetails {
 
-    private UserAccount user;
+    @Getter
+    private final UserAccount user;
 
     public CustomUserDetails(UserAccount user) {
-        System.out.println("CustomUserDetails constructor");
+        log.info("Creating CustomUserDetails for user: {}", user);
         this.user = user;
+    }
+
+    public int getId() {
+        return user.getId();
     }
 
     @Override
@@ -31,7 +38,6 @@ public class CustomUserDetails implements UserDetails {
     public String getUsername() {
         return user.getEmail();
     }
-
 
     @Override
     public boolean isAccountNonExpired() {

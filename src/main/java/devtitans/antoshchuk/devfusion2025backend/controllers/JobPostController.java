@@ -3,9 +3,19 @@ package devtitans.antoshchuk.devfusion2025backend.controllers;
 import devtitans.antoshchuk.devfusion2025backend.dto.request.JobPostFilterRequestDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostDetailedResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostResponseDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.request.JobPostCreateRequestDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.JobTypeDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.JobGradationDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.RequiredExperienceDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.TagDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.JobPostSkillDTO;
+import devtitans.antoshchuk.devfusion2025backend.models.user.UserType;
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
 import devtitans.antoshchuk.devfusion2025backend.services.JobPostService;
 import devtitans.antoshchuk.devfusion2025backend.services.JobViewHistoryService;
+import devtitans.antoshchuk.devfusion2025backend.services.JobNotificationService;
+import devtitans.antoshchuk.devfusion2025backend.security.detail.CustomUserDetails;
+import devtitans.antoshchuk.devfusion2025backend.exceptions.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,46 +23,63 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import devtitans.antoshchuk.devfusion2025backend.repositories.TagRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.SkillRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.JobGradationRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.JobTypeRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.RequiredExperienceRepository;
+import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
+import devtitans.antoshchuk.devfusion2025backend.models.job.Tag;
+import devtitans.antoshchuk.devfusion2025backend.models.job.JobType;
+import devtitans.antoshchuk.devfusion2025backend.models.job.JobGradation;
+import devtitans.antoshchuk.devfusion2025backend.models.job.RequiredExperience;
+import devtitans.antoshchuk.devfusion2025backend.models.user.Skill;
+import devtitans.antoshchuk.devfusion2025backend.models.user.JobPostSkill;
+import devtitans.antoshchuk.devfusion2025backend.repositories.JobPostSkillRepository;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/job-posts")
-@Tag(
-    name = "Job Posts",
-    description = """
-        API for managing job posts - search, filtering, and details retrieval.
-        
-        ## Authentication
-        Some endpoints require a valid JWT token in the Authorization header:
-        ```
-        Authorization: Bearer <your_jwt_token>
-        ```
-        
-        ## Error Responses
-        All endpoints return standardized error responses in the following format:
-        ```json
-        {
-            "success": false,
-            "message": "Error description",
-            "data": null
-        }
-        ```
-        """
-)
 public class JobPostController {
+
+    private static final Logger log = LoggerFactory.getLogger(JobPostController.class);
 
     private final JobPostService jobPostService;
     private final JobViewHistoryService jobViewHistoryService;
+    private final JobNotificationService jobNotificationService;
+    private final TagRepository tagRepository;
+    private final SkillRepository skillRepository;
+    private final JobGradationRepository jobGradationRepository;
+    private final JobTypeRepository jobTypeRepository;
+    private final RequiredExperienceRepository requiredExperienceRepository;
+    private final JobPostSkillRepository jobPostSkillRepository;
 
     @Autowired
-    public JobPostController(JobPostService jobPostService, JobViewHistoryService jobViewHistoryService) {
+    public JobPostController(JobPostService jobPostService, JobViewHistoryService jobViewHistoryService, JobNotificationService jobNotificationService,
+                            TagRepository tagRepository, SkillRepository skillRepository, JobGradationRepository jobGradationRepository,
+                            JobTypeRepository jobTypeRepository, RequiredExperienceRepository requiredExperienceRepository,
+                            JobPostSkillRepository jobPostSkillRepository) {
         this.jobPostService = jobPostService;
         this.jobViewHistoryService = jobViewHistoryService;
+        this.jobNotificationService = jobNotificationService;
+        this.tagRepository = tagRepository;
+        this.skillRepository = skillRepository;
+        this.jobGradationRepository = jobGradationRepository;
+        this.jobTypeRepository = jobTypeRepository;
+        this.requiredExperienceRepository = requiredExperienceRepository;
+        this.jobPostSkillRepository = jobPostSkillRepository;
     }
 
     @GetMapping
@@ -220,9 +247,44 @@ public class JobPostController {
                 )
             }
         )
-        JobPostFilterRequestDTO filterRequest
+        JobPostFilterRequestDTO filterRequest,
+        Authentication authentication
     ) {
-        return ResponseEntity.ok(jobPostService.getFilteredJobPosts(filterRequest));
+        log.info("[getAllJobPosts] Called with params: searchQuery={}, location={}, companyId={}, jobType={}, gradation={}, isActive={}, page={}, size={}",
+            filterRequest.getSearchQuery(), filterRequest.getLocation(), filterRequest.getCompanyId(), filterRequest.getJobType(), filterRequest.getGradation(), filterRequest.getIsActive(), filterRequest.getPage(), filterRequest.getSize());
+        try {
+            Page<JobPostResponseDTO> result = jobPostService.getFilteredJobPosts(filterRequest);
+            log.info("[getAllJobPosts] jobPostService.getFilteredJobPosts executed successfully");
+            if (authentication != null && authentication.isAuthenticated()) {
+                log.info("[getAllJobPosts] User is authenticated");
+                if (filterRequest.getSearchQuery() != null) {
+                    try {
+                        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+                        UserAccount user = userDetails.getUser();
+                        log.info("[getAllJobPosts] Saving search history for userId={}", user.getId());
+                        jobNotificationService.saveSearchHistory(
+                            (long) user.getId(),
+                            filterRequest.getSearchQuery(),
+                            null, // tags
+                            null, // skills
+                            filterRequest.getJobType(),
+                            filterRequest.getGradation()
+                        );
+                        log.info("[getAllJobPosts] Search history saved for userId={}", user.getId());
+                    } catch (Exception e) {
+                        log.error("[getAllJobPosts] Error while saving search history: {}", e.getMessage(), e);
+                    }
+                } else {
+                    log.info("[getAllJobPosts] searchQuery is null, not saving search history");
+                }
+            } else {
+                log.info("[getAllJobPosts] User is not authenticated, not saving search history");
+            }
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[getAllJobPosts] Exception: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @GetMapping("/{id}")
@@ -316,7 +378,7 @@ public class JobPostController {
             )
         )
     })
-    public ResponseEntity<JobPostDetailedResponseDTO> getJobPostDetails(
+    public ResponseEntity<?> getJobPostDetails(
         @Parameter(
             description = "Job post ID",
             required = true,
@@ -325,44 +387,343 @@ public class JobPostController {
         @PathVariable Integer id,
         Authentication authentication
     ) {
-        JobPostDetailedResponseDTO jobPost = jobPostService.getJobPostDetails(id);
-        
-        // Save view history if user is authenticated
-        if (authentication != null && authentication.isAuthenticated()) {
-            UserAccount user = (UserAccount) authentication.getPrincipal();
-            jobViewHistoryService.saveJobView(
-                (long) user.getId(),
-                (long) id,
-                jobPost.getTitle(),
-                jobPost.getCompany().getName()
+        try {
+            JobPostDetailedResponseDTO jobPost = jobPostService.getJobPostDetails(id);
+            if (jobPost == null) {
+                return ResponseEntity.status(404).body(
+                    Map.of(
+                        "success", false,
+                        "message", "Job post not found",
+                        "data", null
+                    )
+                );
+            }
+            // Save view history if user is authenticated
+            if (authentication != null && authentication.isAuthenticated()) {
+                try {
+                    CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+                    UserAccount user = userDetails.getUser();
+                    jobViewHistoryService.saveJobView(
+                        (long) user.getId(),
+                        (long) id,
+                        jobPost.getTitle(),
+                        jobPost.getCompany().getName()
+                    );
+                } catch (Exception e) {
+                    log.error("[getJobPostDetails] Error while saving view history: {}", e.getMessage(), e);
+                }
+            }
+            return ResponseEntity.ok(jobPost);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(
+                Map.of(
+                    "success", false,
+                    "message", "Job post not found",
+                    "data", null
+                )
+            );
+        } catch (Exception e) {
+            log.error("[getJobPostDetails] Exception: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(
+                Map.of(
+                    "success", false,
+                    "message", "Internal server error",
+                    "data", null
+                )
             );
         }
-        
-        return ResponseEntity.ok(jobPost);
     }
 
-    @GetMapping("/search")
+    // --- СПРАВОЧНИКИ ---
     @Operation(
-        summary = "Search job posts",
-        description = "Search job posts with filters and save search history for authenticated users"
-    )
-    public ResponseEntity<Page<JobPostResponseDTO>> searchJobPosts(
-        @RequestBody JobPostFilterRequestDTO filterRequest,
-        Authentication authentication
-    ) {
-        Page<JobPostResponseDTO> result = jobPostService.getFilteredJobPosts(filterRequest);
-        
-        // Save search history if user is authenticated
-        if (authentication != null && authentication.isAuthenticated() && filterRequest.getSearchQuery() != null) {
-            UserAccount user = (UserAccount) authentication.getPrincipal();
-            jobViewHistoryService.saveJobView(
-                (long) user.getId(),
-                null,
-                filterRequest.getSearchQuery(),
-                null
-            );
+        summary = "Get all tags",
+        description = "Returns all available tags for job posts. Useful for job creation forms.",
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "List of tags",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TagDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          \"success\": true,
+                          \"message\": \"Tags retrieved successfully\",
+                          \"data\": [
+                            {\"id\":1,\"name\":\"Java\"},
+                            {\"id\":2,\"name\":\"Spring\"}
+                          ]
+                        }
+                        """
+                    )
+                )
+            )
         }
-        
-        return ResponseEntity.ok(result);
+    )
+    @GetMapping("/tags")
+    public ResponseEntity<List<TagDTO>> getAllTags() {
+        return ResponseEntity.ok(
+            tagRepository.findAll().stream()
+                .map(tag -> TagDTO.builder().id(tag.getId()).name(tag.getName()).build())
+                .toList()
+        );
+    }
+
+    @Operation(
+        summary = "Get all skills",
+        description = "Returns all available skills for job posts. Useful for job creation forms.",
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "List of skills",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = JobPostSkillDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          \"success\": true,
+                          \"message\": \"Skills retrieved successfully\",
+                          \"data\": [
+                            {\"id\":1,\"name\":\"Java\"},
+                            {\"id\":2,\"name\":\"SQL\"}
+                          ]
+                        }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    @GetMapping("/skills")
+    public ResponseEntity<List<JobPostSkillDTO>> getAllSkills() {
+        return ResponseEntity.ok(
+            skillRepository.findAll().stream()
+                .map(skill -> JobPostSkillDTO.builder().id(skill.getId()).name(skill.getName()).build())
+                .toList()
+        );
+    }
+
+    @Operation(
+        summary = "Get all gradations",
+        description = "Returns all available job gradations (levels). Useful for job creation forms.",
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "List of gradations",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = JobGradationDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          \"success\": true,
+                          \"message\": \"Gradations retrieved successfully\",
+                          \"data\": [
+                            {\"id\":1,\"name\":\"Junior\"},
+                            {\"id\":2,\"name\":\"Senior\"}
+                          ]
+                        }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    @GetMapping("/gradations")
+    public ResponseEntity<List<JobGradationDTO>> getAllGradations() {
+        return ResponseEntity.ok(
+            jobGradationRepository.findAll().stream()
+                .map(grad -> new JobGradationDTO(grad.getId(), grad.getName()))
+                .toList()
+        );
+    }
+
+    @Operation(
+        summary = "Get all job types",
+        description = "Returns all available job types. Useful for job creation forms.",
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "List of job types",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = JobTypeDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          \"success\": true,
+                          \"message\": \"Job types retrieved successfully\",
+                          \"data\": [
+                            {\"id\":1,\"name\":\"Full Time\"},
+                            {\"id\":2,\"name\":\"Part Time\"}
+                          ]
+                        }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    @GetMapping("/types")
+    public ResponseEntity<List<JobTypeDTO>> getAllJobTypes() {
+        return ResponseEntity.ok(
+            jobTypeRepository.findAll().stream()
+                .map(type -> new JobTypeDTO(type.getId(), type.getName()))
+                .toList()
+        );
+    }
+
+    @Operation(
+        summary = "Get all required experiences",
+        description = "Returns all available required experiences. Useful for job creation forms.",
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "List of required experiences",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = RequiredExperienceDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          \"success\": true,
+                          \"message\": \"Experiences retrieved successfully\",
+                          \"data\": [
+                            {\"id\":1,\"name\":\"1-3 years\"},
+                            {\"id\":2,\"name\":\"3-5 years\"}
+                          ]
+                        }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    @GetMapping("/experiences")
+    public ResponseEntity<List<RequiredExperienceDTO>> getAllExperiences() {
+        return ResponseEntity.ok(
+            requiredExperienceRepository.findAll().stream()
+                .map(exp -> RequiredExperienceDTO.builder().id(exp.getId()).experience(exp.getExperience()).build())
+                .toList()
+        );
+    }
+
+    // --- СОЗДАНИЕ ВАКАНСИИ ---
+    @Operation(
+        summary = "Create a new job post",
+        description = "Creates a new job post for the authenticated company. Only users with COMPANY role can create vacancies.",
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                schema = @Schema(implementation = JobPostCreateRequestDTO.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                      \"title\": \"Senior Java Developer\",
+                      \"titleEn\": \"Senior Java Developer\",
+                      \"description\": \"We are looking for an experienced Java developer...\",
+                      \"descriptionEn\": \"We are looking for an experienced Java developer...\",
+                      \"requirements\": [\"5+ years of Java experience\", \"Spring Framework knowledge\"],
+                      \"responsibilities\": [\"Develop backend services\", \"Participate in code reviews\"],
+                      \"salaryRange\": \"$80,000 - $120,000\",
+                      \"location\": \"London, UK\",
+                      \"jobTypeId\": 1,
+                      \"jobGradationId\": 2,
+                      \"requiredExperienceId\": 3,
+                      \"tagIds\": [1,2,3],
+                      \"skills\": [{\"id\":1,\"level\":3},{\"id\":2,\"level\":2}],
+                      \"language\": \"English\"
+                    }
+                    """
+                )
+            )
+        ),
+        responses = {
+            @ApiResponse(
+                responseCode = "201",
+                description = "Job post created successfully",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = "{ 'success': true, 'message': 'Job post created', 'data': { 'id': 123 } }"
+                    )
+                )
+            ),
+            @ApiResponse(
+                responseCode = "400",
+                description = "Invalid input or reference ID not found",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = "{ 'success': false, 'message': 'Tag not found', 'data': null }"
+                    )
+                )
+            ),
+            @ApiResponse(
+                responseCode = "403",
+                description = "Only COMPANY users can create job posts"
+            )
+        }
+    )
+    @PostMapping
+    @PreAuthorize("hasRole('COMPANY')")
+    public ResponseEntity<?> createJobPost(@Valid @RequestBody JobPostCreateRequestDTO request,
+                                           Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UserAccount user = userDetails.getUser();
+        if (!user.getUserType().getName().equalsIgnoreCase("COMPANY")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "success", false,
+                "message", "Only COMPANY users can create job posts",
+                "data", null
+            ));
+        }
+        // Получаем справочные сущности по id
+        JobType jobType = jobTypeRepository.findById(request.getJobTypeId())
+                .orElse(null);
+        if (jobType == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Job type not found", "data", null));
+        JobGradation gradation = jobGradationRepository.findById(request.getJobGradationId())
+                .orElse(null);
+        if (gradation == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Job gradation not found", "data", null));
+        RequiredExperience experience = requiredExperienceRepository.findById(request.getRequiredExperienceId())
+                .orElse(null);
+        if (experience == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Required experience not found", "data", null));
+        List<Tag> tags = tagRepository.findAllById(request.getTagIds());
+        if (tags.size() != request.getTagIds().size()) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Some tags not found", "data", null));
+        // Создаём JobPost
+        JobPost jobPost = new JobPost();
+        jobPost.setTitle(request.getTitle());
+        jobPost.setTitleEn(request.getTitleEn());
+        jobPost.setJobDescription(request.getDescription());
+        jobPost.setJobDescriptionEn(request.getDescriptionEn());
+        jobPost.setJobLocation(request.getLocation());
+        jobPost.setSalary(request.getSalaryRange());
+        jobPost.setLanguage(request.getLanguage());
+        jobPost.setJobType(jobType);
+        jobPost.setJobGradation(gradation);
+        jobPost.setExperience(experience);
+        jobPost.setCompany(user.getCompany());
+        jobPost.setCreatedDateTime(new java.util.Date());
+        jobPost.setActive(true);
+        jobPost.setTags(new java.util.LinkedHashSet<Tag>(tags));
+        // Сохраняем JobPost (без скиллов)
+        jobPost = jobPostService.save(jobPost);
+        // Привязываем скиллы
+        for (JobPostSkillDTO skillDTO : request.getSkills()) {
+            Skill skill = skillRepository.findById(skillDTO.getId()).orElse(null);
+            if (skill == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Skill not found: " + skillDTO.getId(), "data", null));
+            JobPostSkill jobPostSkill = new JobPostSkill();
+            jobPostSkill.setJobPost(jobPost);
+            jobPostSkill.setSkill(skill);
+            jobPostSkill.setSkillLevel(skillDTO.getLevel());
+            jobPostSkillRepository.save(jobPostSkill);
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+            "success", true,
+            "message", "Job post created",
+            "data", Map.of("id", jobPost.getId())
+        ));
     }
 }

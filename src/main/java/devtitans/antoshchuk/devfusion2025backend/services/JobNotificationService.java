@@ -5,6 +5,8 @@ import devtitans.antoshchuk.devfusion2025backend.models.TelegramUser;
 import devtitans.antoshchuk.devfusion2025backend.repositories.SearchHistoryRepository;
 import devtitans.antoshchuk.devfusion2025backend.repositories.TelegramUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class JobNotificationService {
+    
+    private static final Logger log = LoggerFactory.getLogger(JobNotificationService.class);
     
     private final TelegramBotService telegramBotService;
     private final TelegramUserRepository telegramUserRepository;
@@ -108,9 +112,17 @@ public class JobNotificationService {
     
     public void saveSearchHistory(Long userId, String searchQuery, List<String> tags,
                                 List<String> skills, String jobType, String jobGradation) {
-        SearchHistory searchHistory = new SearchHistory(
-            userId, searchQuery, tags, skills, jobType, jobGradation
-        );
-        searchHistoryRepository.save(searchHistory);
+        log.info("[saveSearchHistory] userId={}, searchQuery={}, tags={}, skills={}, jobType={}, jobGradation={}",
+                userId, searchQuery, tags, skills, jobType, jobGradation);
+        try {
+            SearchHistory searchHistory = new SearchHistory(
+                userId, searchQuery, tags, skills, jobType, jobGradation
+            );
+            searchHistoryRepository.save(searchHistory);
+            log.info("[saveSearchHistory] Successfully saved search history for userId={}", userId);
+        } catch (Exception e) {
+            log.error("[saveSearchHistory] Error saving search history for userId={}: {}", userId, e.getMessage(), e);
+            throw e;
+        }
     }
 } 

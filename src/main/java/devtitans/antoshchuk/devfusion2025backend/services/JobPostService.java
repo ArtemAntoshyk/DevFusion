@@ -80,4 +80,9 @@ public class JobPostService {
         
         return jobPostMapper.toDetailedDTO(jobPost);
     }
+
+    @Transactional
+    public JobPost save(JobPost jobPost) {
+        return jobPostRepository.save(jobPost);
+    }
 }
