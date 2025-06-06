@@ -25,12 +25,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String path = request.getServletPath();
-        if (path.equals("/api/auth/register") || path.equals("/api/auth/login")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        boolean isPublic =
+            path.equals("/api/auth/register") ||
+            path.equals("/api/auth/login") ||
+            (path.startsWith("/api/v1/companies")) ||
+            (path.startsWith("/api/v1/job-posts")) ||
+            (path.startsWith("/api/v1/statistics/companies"));
 
         String token = jwtTokenProvider.resolveToken(request);
+        System.out.println("[JwtAuthenticationFilter] path=" + path + ", isPublic=" + isPublic + ", token=" + (token != null));
         if (token != null) {
             try {
                 if (jwtTokenProvider.validateToken(token)) {
@@ -40,12 +43,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    System.out.println("[JwtAuthenticationFilter] Authenticated user: " + username);
                 }
             } catch (RuntimeException ex) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid or expired token");
+                System.out.println("[JwtAuthenticationFilter] Invalid or expired token");
                 return;
             }
+        } else if (!isPublic) {
+            // Если приватный эндпоинт и нет токена — 401
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Missing token");
+            System.out.println("[JwtAuthenticationFilter] Missing token for private endpoint");
+            return;
         }
 
         filterChain.doFilter(request, response);
