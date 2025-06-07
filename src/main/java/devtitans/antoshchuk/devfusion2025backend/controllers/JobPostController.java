@@ -9,8 +9,7 @@ import devtitans.antoshchuk.devfusion2025backend.dto.response.JobGradationDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.RequiredExperienceDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.TagDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.JobPostSkillDTO;
-import devtitans.antoshchuk.devfusion2025backend.models.user.UserType;
-import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
+import devtitans.antoshchuk.devfusion2025backend.models.user.*;
 import devtitans.antoshchuk.devfusion2025backend.services.JobPostService;
 import devtitans.antoshchuk.devfusion2025backend.services.JobViewHistoryService;
 import devtitans.antoshchuk.devfusion2025backend.services.JobNotificationService;
@@ -43,9 +42,12 @@ import devtitans.antoshchuk.devfusion2025backend.models.job.Tag;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobType;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobGradation;
 import devtitans.antoshchuk.devfusion2025backend.models.job.RequiredExperience;
-import devtitans.antoshchuk.devfusion2025backend.models.user.Skill;
-import devtitans.antoshchuk.devfusion2025backend.models.user.JobPostSkill;
 import devtitans.antoshchuk.devfusion2025backend.repositories.JobPostSkillRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.JobPostActivityRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.SeekerRepository;
+import devtitans.antoshchuk.devfusion2025backend.models.job.JobPostActivity;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyJobPostShortDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostApplicantDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -65,12 +67,15 @@ public class JobPostController {
     private final JobTypeRepository jobTypeRepository;
     private final RequiredExperienceRepository requiredExperienceRepository;
     private final JobPostSkillRepository jobPostSkillRepository;
+    private final JobPostActivityRepository jobPostActivityRepository;
+    private final SeekerRepository seekerRepository;
 
     @Autowired
     public JobPostController(JobPostService jobPostService, JobViewHistoryService jobViewHistoryService, JobNotificationService jobNotificationService,
                             TagRepository tagRepository, SkillRepository skillRepository, JobGradationRepository jobGradationRepository,
                             JobTypeRepository jobTypeRepository, RequiredExperienceRepository requiredExperienceRepository,
-                            JobPostSkillRepository jobPostSkillRepository) {
+                            JobPostSkillRepository jobPostSkillRepository, JobPostActivityRepository jobPostActivityRepository,
+                            SeekerRepository seekerRepository) {
         this.jobPostService = jobPostService;
         this.jobViewHistoryService = jobViewHistoryService;
         this.jobNotificationService = jobNotificationService;
@@ -80,6 +85,8 @@ public class JobPostController {
         this.jobTypeRepository = jobTypeRepository;
         this.requiredExperienceRepository = requiredExperienceRepository;
         this.jobPostSkillRepository = jobPostSkillRepository;
+        this.jobPostActivityRepository = jobPostActivityRepository;
+        this.seekerRepository = seekerRepository;
     }
 
     @GetMapping
@@ -91,10 +98,9 @@ public class JobPostController {
             ## Filtering Options
             - searchQuery: Search in title and description
             - location: Filter by job location (e.g., 'London', 'Remote')
-            - companyId: Filter by specific company
-            - jobType: Filter by job type (FULL_TIME, PART_TIME, CONTRACT, FREELANCE, INTERNSHIP)
-            - gradation: Filter by experience level (JUNIOR, MIDDLE, SENIOR, LEAD)
-            - isActive: Filter by vacancy status (true/false)
+            - jobType: Filter by job type (ID of job type, e.g., 1, 2, 3)
+            - experience: Filter by experience (e.g., '3-5', '5+')
+            - skillIds: Filter by required skill IDs (e.g., [1,2,3])
             
             ## Sorting Options
             - createdDateTime (default)
@@ -108,7 +114,7 @@ public class JobPostController {
             
             ## Example Requests
             1. Basic: GET /api/v1/job-posts
-            2. With filters: GET /api/v1/job-posts?searchQuery=java&location=London&jobType=FULL_TIME
+            2. With filters: GET /api/v1/job-posts?searchQuery=java&location=London&jobType=1
             3. With sorting: GET /api/v1/job-posts?sortBy=createdDateTime&sortDirection=DESC
             4. With pagination: GET /api/v1/job-posts?page=0&size=10
             
@@ -222,10 +228,9 @@ public class JobPostController {
                 
                 searchQuery: Search in title and description
                 location: Filter by job location (e.g., 'London', 'Remote')
-                companyId: Filter by specific company
-                jobType: Filter by job type (FULL_TIME, PART_TIME, CONTRACT, FREELANCE, INTERNSHIP)
-                gradation: Filter by experience level (JUNIOR, MIDDLE, SENIOR, LEAD)
-                isActive: Filter by vacancy status (true/false)
+                jobType: Filter by job type (ID of job type, e.g., 1, 2, 3)
+                experience: Filter by experience (e.g., '3-5', '5+')
+                skillIds: Filter by required skill IDs (e.g., [1,2,3])
                 sortBy: Field to sort by (createdDateTime, title, location, company.name)
                 sortDirection: Sort direction (ASC, DESC)
                 page: Page number (starts from 0)
@@ -239,7 +244,7 @@ public class JobPostController {
                 ),
                 @ExampleObject(
                     name = "Advanced filter",
-                    value = "jobType=FULL_TIME&gradation=SENIOR&isActive=true"
+                    value = "jobType=1&experience=3-5&skillIds=1,2,3"
                 ),
                 @ExampleObject(
                     name = "Sorting and pagination",
@@ -250,8 +255,8 @@ public class JobPostController {
         JobPostFilterRequestDTO filterRequest,
         Authentication authentication
     ) {
-        log.info("[getAllJobPosts] Called with params: searchQuery={}, location={}, companyId={}, jobType={}, gradation={}, isActive={}, page={}, size={}",
-            filterRequest.getSearchQuery(), filterRequest.getLocation(), filterRequest.getCompanyId(), filterRequest.getJobType(), filterRequest.getGradation(), filterRequest.getIsActive(), filterRequest.getPage(), filterRequest.getSize());
+        log.info("[getAllJobPosts] Called with params: searchQuery={}, location={}, jobType={}, experience={}, skillIds={}, page={}, size={}",
+            filterRequest.getSearchQuery(), filterRequest.getLocation(), filterRequest.getJobType(), filterRequest.getExperience(), filterRequest.getSkillIds(), filterRequest.getPage(), filterRequest.getSize());
         try {
             Page<JobPostResponseDTO> result = jobPostService.getFilteredJobPosts(filterRequest);
             log.info("[getAllJobPosts] jobPostService.getFilteredJobPosts executed successfully");
@@ -268,7 +273,7 @@ public class JobPostController {
                             null, // tags
                             null, // skills
                             filterRequest.getJobType(),
-                            filterRequest.getGradation()
+                            filterRequest.getExperience() != null ? filterRequest.getExperience().toString() : null
                         );
                         log.info("[getAllJobPosts] Search history saved for userId={}", user.getId());
                     } catch (Exception e) {
@@ -591,8 +596,8 @@ public class JobPostController {
                           \"success\": true,
                           \"message\": \"Experiences retrieved successfully\",
                           \"data\": [
-                            {\"id\":1,\"name\":\"1-3 years\"},
-                            {\"id\":2,\"name\":\"3-5 years\"}
+                            {\"id\":1,\"experience\":\"1-3 years\"},
+                            {\"id\":2,\"experience\":\"3-5 years\"}
                           ]
                         }
                         """
@@ -725,5 +730,157 @@ public class JobPostController {
             "message", "Job post created",
             "data", Map.of("id", jobPost.getId())
         ));
+    }
+
+    @Operation(
+        summary = "Get job posts by company ID",
+        description = "Returns a paginated list of job posts for a specific company. Default page size is 6. You can change the page and size via query params.",
+        parameters = {
+            @Parameter(name = "companyId", description = "ID of the company", required = true, example = "1"),
+            @Parameter(name = "page", description = "Page number (starts from 0)", example = "0", required = false),
+            @Parameter(name = "size", description = "Number of items per page", example = "6", required = false)
+        },
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "Successfully retrieved job posts",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Page.class)
+                )
+            ),
+            @ApiResponse(
+                responseCode = "404",
+                description = "Company not found"
+            )
+        }
+    )
+    @GetMapping("/by-company/{companyId}")
+    public ResponseEntity<Page<JobPostResponseDTO>> getJobPostsByCompany(
+            @PathVariable Integer companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size
+    ) {
+        Page<JobPost> jobPosts = jobPostService.getJobPostsByCompanyId(companyId, page, size);
+        Page<JobPostResponseDTO> response = jobPosts.map(jobPostService.getJobPostMapper()::toResponseDTO);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Respond to a job post (apply)",
+        description = "Allows an authenticated user (seeker) to apply to a job post. Vacancy id is passed in the request body.",
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                schema = @Schema(implementation = RespondRequest.class),
+                examples = @ExampleObject(value = "{\"jobPostId\": 123}")
+            )
+        ),
+        responses = {
+            @ApiResponse(responseCode = "201", description = "Successfully applied to job post"),
+            @ApiResponse(responseCode = "400", description = "Invalid job post or user"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+        }
+    )
+    @PostMapping("/apply")
+    public ResponseEntity<?> respondToJobPost(@RequestBody RespondRequest request, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Unauthorized", "data", null));
+        }
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UserAccount user = userDetails.getUser();
+        Seeker seeker = seekerRepository.findByUserAccountId(user.getId());
+        if (seeker == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "User is not a seeker", "data", null));
+        }
+        JobPost jobPost = jobPostService.getJobPostById(request.getJobPostId());
+        if (jobPost == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Job post not found", "data", null));
+        }
+        JobPostActivity activity = new JobPostActivity();
+        activity.setJobPost(jobPost);
+        activity.setSeeker(seeker);
+        activity.setApplyDate(new java.util.Date());
+        activity.setStatus("Очікує");
+        jobPostActivityRepository.save(activity);
+        return ResponseEntity.status(201).body(Map.of("success", true, "message", "Successfully applied to job post"));
+    }
+
+    public static class RespondRequest {
+        @Schema(description = "Job post ID", example = "123")
+        private Integer jobPostId;
+        public Integer getJobPostId() { return jobPostId; }
+        public void setJobPostId(Integer jobPostId) { this.jobPostId = jobPostId; }
+    }
+
+    @Operation(
+        summary = "Get all job posts for authenticated company",
+        description = "Returns paginated list of job posts for the authenticated company. Only for COMPANY users.",
+        parameters = {
+            @Parameter(name = "page", description = "Page number (starts from 0)", example = "0", required = false),
+            @Parameter(name = "size", description = "Number of items per page", example = "6", required = false)
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved job posts")
+        }
+    )
+    @GetMapping("/my")
+    public ResponseEntity<?> getMyJobPosts(Authentication authentication,
+                                           @RequestParam(defaultValue = "0") int page,
+                                           @RequestParam(defaultValue = "6") int size) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UserAccount user = userDetails.getUser();
+        if (!user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Only COMPANY users can view their job posts", "data", null));
+        }
+        var result = jobPostService.getCompanyJobPosts(user.getCompany().getId(), page, size);
+        return ResponseEntity.ok(Map.of("success", true, "data", result));
+    }
+
+    @Operation(
+        summary = "Get full job post info for company",
+        description = "Returns full info about a job post for the authenticated company (must be owner).",
+        parameters = {
+            @Parameter(name = "jobPostId", description = "Job post ID", required = true, example = "123")
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved job post details"),
+            @ApiResponse(responseCode = "404", description = "Job post not found or not owned by company")
+        }
+    )
+    @GetMapping("/my/{jobPostId}")
+    public ResponseEntity<?> getMyJobPostDetails(@PathVariable Integer jobPostId, Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UserAccount user = userDetails.getUser();
+        if (!user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Only COMPANY users can view their job posts", "data", null));
+        }
+        var details = jobPostService.getCompanyJobPostDetails(user.getCompany().getId(), jobPostId);
+        if (details == null) {
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Job post not found or not owned by company", "data", null));
+        }
+        return ResponseEntity.ok(Map.of("success", true, "data", details));
+    }
+
+    @Operation(
+        summary = "Get all applicants for a job post",
+        description = "Returns all applicants for a job post (only for company-owner).",
+        parameters = {
+            @Parameter(name = "jobPostId", description = "Job post ID", required = true, example = "123")
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved applicants"),
+            @ApiResponse(responseCode = "404", description = "Job post not found or not owned by company")
+        }
+    )
+    @GetMapping("/{jobPostId}/applicants")
+    public ResponseEntity<?> getApplicantsForJobPost(@PathVariable Integer jobPostId, Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UserAccount user = userDetails.getUser();
+        if (!user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Only COMPANY users can view applicants", "data", null));
+        }
+        var applicants = jobPostService.getApplicantsForJobPost(user.getCompany().getId(), jobPostId);
+        return ResponseEntity.ok(Map.of("success", true, "data", applicants));
     }
 }

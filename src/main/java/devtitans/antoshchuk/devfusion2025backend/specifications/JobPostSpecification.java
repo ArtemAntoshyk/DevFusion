@@ -11,10 +11,9 @@ public class JobPostSpecification {
     public static Specification<JobPost> withFilters(
             String searchQuery,
             String location,
-            Integer companyId,
-            String jobType,
-            String gradation,
-            Boolean isActive
+            Integer jobType,
+            Integer experience,
+            List<Integer> skillIds
     ) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -34,20 +33,16 @@ public class JobPostSpecification {
                 ));
             }
             
-            if (companyId != null) {
-                predicates.add(criteriaBuilder.equal(root.get("company").get("id"), companyId));
+            if (jobType != null) {
+                predicates.add(criteriaBuilder.equal(root.get("jobType").get("id"), jobType));
             }
             
-            if (jobType != null && !jobType.trim().isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("jobType").get("name"), jobType));
+            if (experience != null) {
+                predicates.add(criteriaBuilder.equal(root.get("experience").get("id"), experience));
             }
-            
-            if (gradation != null && !gradation.trim().isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("jobGradation").get("name"), gradation));
-            }
-            
-            if (isActive != null) {
-                predicates.add(criteriaBuilder.equal(root.get("isActive"), isActive));
+
+            if (skillIds != null && !skillIds.isEmpty()) {
+                predicates.add(root.join("jobPostSkillSets").get("skill").get("id").in(skillIds));
             }
             
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

@@ -111,7 +111,7 @@ public class JobNotificationService {
     }
     
     public void saveSearchHistory(Long userId, String searchQuery, List<String> tags,
-                                List<String> skills, String jobType, String jobGradation) {
+                                List<String> skills, Integer jobType, String jobGradation) {
         log.info("[saveSearchHistory] userId={}, searchQuery={}, tags={}, skills={}, jobType={}, jobGradation={}",
                 userId, searchQuery, tags, skills, jobType, jobGradation);
         try {

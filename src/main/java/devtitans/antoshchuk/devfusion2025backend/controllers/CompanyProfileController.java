@@ -105,8 +105,12 @@ public class CompanyProfileController {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             UserAccount userAccount = userDetails.getUser();
             CompanyProfileResponseDTO profile = companyService.getCompanyProfile(userAccount.getId());
+            if (profile == null) {
+                return ResponseEntity.status(404).body(new ApiResponse<>(false, "Company profile not found", null));
+            }
             return ResponseEntity.ok(new ApiResponse<>(true, "Company profile retrieved successfully", profile));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(false, "Error retrieving company profile: " + e.getMessage(), null));
         }

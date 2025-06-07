@@ -129,8 +129,12 @@ public class SeekerProfileController {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             UserAccount userAccount = userDetails.getUser();
             SeekerProfileResponseDTO profile = seekerProfileService.getSeekerProfile(userAccount.getId());
+            if (profile == null) {
+                return ResponseEntity.status(404).body(new ApiResponse<>(false, "Seeker profile not found", null));
+            }
             return ResponseEntity.ok(new ApiResponse<>(true, "Seeker profile retrieved successfully", profile));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(false, "Error retrieving seeker profile: " + e.getMessage(), null));
         }
@@ -139,7 +143,7 @@ public class SeekerProfileController {
     @PutMapping
     @Operation(
         summary = "Update authenticated seeker's profile",
-        description = "Updates the profile information of the currently authenticated seeker.",
+        description = "Updates the profile information of the currently authenticated seeker, including all possible fields: personal info, skills, education, and experience.",
         requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
             content = @Content(
@@ -154,7 +158,33 @@ public class SeekerProfileController {
                         "currentMonthlySalary": 5000.0,
                         "cvUrl": "https://example.com/cv.pdf",
                         "email": "john.doe@example.com",
-                        "contactNumber": "+380501234567"
+                        "contactNumber": "+380501234567",
+                        "skills": [
+                            { "skillId": 1, "skillLevel": 5, "description": "Java expert" },
+                            { "skillId": 2, "skillLevel": 4, "description": "Spring Boot" }
+                        ],
+                        "education": [
+                            {
+                                "certificateDegreeId": 1,
+                                "major": "Computer Science",
+                                "instituteOrUniversityName": "University of Kyiv",
+                                "startDate": "2010-09-01",
+                                "completionDate": "2014-06-30",
+                                "cgpa": 90
+                            }
+                        ],
+                        "experience": [
+                            {
+                                "isCurrentJob": true,
+                                "startDate": "2018-01-01",
+                                "endDate": "2023-12-31",
+                                "jobTitle": "Senior Java Developer",
+                                "companyName": "Tech Solutions",
+                                "jobLocationCity": "Kyiv",
+                                "jobLocationCountry": "Ukraine",
+                                "description": "Led development of enterprise applications"
+                            }
+                        ]
                     }
                     """
                 )
