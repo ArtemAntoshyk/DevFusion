@@ -17,13 +17,13 @@ public class SearchHistory {
     private String searchQuery;
     private List<String> tags;
     private List<String> skills;
-    private String jobType;
+    private Integer jobType;
     private String jobGradation;
     private LocalDateTime searchTimestamp;
     
     // Constructor for search queries
     public SearchHistory(Long userId, String searchQuery, List<String> tags, List<String> skills, 
-                        String jobType, String jobGradation) {
+                        Integer jobType, String jobGradation) {
         this.userId = userId;
         this.searchQuery = searchQuery;
         this.tags = tags;

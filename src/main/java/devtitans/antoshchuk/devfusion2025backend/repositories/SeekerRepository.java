@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SeekerRepository extends JpaRepository<Seeker, Integer> {
+    Seeker findByUserAccountId(Integer userAccountId);
 } 

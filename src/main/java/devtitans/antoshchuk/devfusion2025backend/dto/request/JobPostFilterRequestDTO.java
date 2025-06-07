@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.List;
 
 
 @Getter
@@ -16,17 +17,14 @@ public class JobPostFilterRequestDTO {
     @Schema(description = "Job location", example = "London")
     private String location;
 
-    @Schema(description = "Company ID", example = "1")
-    private Integer companyId;
+    @Schema(description = "Job type ID", example = "1")
+    private Integer jobType;
 
-    @Schema(description = "Job type", example = "FULL_TIME")
-    private String jobType;
+    @Schema(description = "Experience ID (from experience table)", example = "3")
+    private Integer experience;
 
-    @Schema(description = "Experience level", example = "SENIOR")
-    private String gradation;
-
-    @Schema(description = "Job post active status", example = "true")
-    private Boolean isActive;
+    @Schema(description = "Skill IDs to filter by", example = "[1,2,3]")
+    private List<Integer> skillIds;
 
     @Schema(description = "Field to sort by", example = "createdDateTime", defaultValue = "createdDateTime")
     private String sortBy = "createdDateTime";
