@@ -37,4 +37,7 @@ public class JobPostFilterRequestDTO {
 
     @Schema(description = "Number of items per page", example = "6", defaultValue = "6")
     private Integer size = 6;
+
+    @Schema(description = "Active status filter: 'true' (default, only active), 'false' (only inactive), 'all' (all job posts)", example = "true", defaultValue = "true")
+    private String active = "true";
 } 

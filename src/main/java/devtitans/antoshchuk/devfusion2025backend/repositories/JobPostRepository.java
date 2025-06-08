@@ -16,4 +16,7 @@ public interface JobPostRepository extends JpaRepository<JobPost, Integer>, JpaS
     
     @Query("SELECT j FROM JobPost j WHERE j.company.id = :companyId")
     List<JobPost> findJobPostsByCompanyId(@Param("companyId") int companyId);
+
+    @Query("SELECT DISTINCT j.id FROM JobPost j JOIN j.tags t WHERE (:tagIds IS NULL OR t.id IN :tagIds)")
+    List<Integer> findIdsByTagIds(@Param("tagIds") List<Integer> tagIds);
 } 

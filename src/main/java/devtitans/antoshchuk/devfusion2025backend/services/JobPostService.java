@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerJobPostResponseDTO;
 
@@ -40,10 +41,6 @@ public class JobPostService {
         return jobPostRepository.findAll();
     }
 
-    public List<JobPost> getJobPostsByCompanyId(int companyId) {
-        return jobPostRepository.findJobPostsByCompanyId(companyId);
-    }
-
     public JobPost getJobPostById(int id) {
         return jobPostRepository.findById(id).orElse(null);
     }
@@ -53,7 +50,7 @@ public class JobPostService {
     }
 
     @Transactional
-    public Page<JobPostResponseDTO> getFilteredJobPosts(JobPostFilterRequestDTO filterRequest) {
+    public Page<JobPostResponseDTO> getFilteredJobPosts(JobPostFilterRequestDTO filterRequest, String active) {
         Sort sort = Sort.by(
             filterRequest.getSortDirection().equalsIgnoreCase("ASC") ? 
             Sort.Direction.ASC : Sort.Direction.DESC,
@@ -72,7 +69,8 @@ public class JobPostService {
                 filterRequest.getLocation(),
                 filterRequest.getJobType(),
                 filterRequest.getExperience(),
-                filterRequest.getSkillIds()
+                filterRequest.getSkillIds(),
+                active
             ),
             pageRequest
         );
@@ -93,20 +91,14 @@ public class JobPostService {
         return jobPostRepository.save(jobPost);
     }
 
-    public Page<JobPost> getJobPostsByCompanyId(int companyId, int page, int size) {
-        return jobPostRepository.findAll(
-            (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId),
-            PageRequest.of(page, size)
-        );
-    }
-
-    public JobPostMapper getJobPostMapper() {
-        return jobPostMapper;
-    }
-
-    public Page<CompanyJobPostShortDTO> getCompanyJobPosts(int companyId, int page, int size) {
+    public Page<CompanyJobPostShortDTO> getCompanyJobPosts(int companyId, int page, int size, String active) {
+        Specification<JobPost> spec = (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId);
+        if (active != null && !"all".equalsIgnoreCase(active)) {
+            boolean isActive = !"false".equalsIgnoreCase(active);
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("isActive"), isActive));
+        }
         Page<JobPost> jobPosts = jobPostRepository.findAll(
-            (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId),
+            spec,
             PageRequest.of(page, size)
         );
         return jobPosts.map(jp -> CompanyJobPostShortDTO.builder()
@@ -137,6 +129,7 @@ public class JobPostService {
                     var seeker = activity.getSeeker();
                     var user = seeker.getUserAccount();
                     return JobPostApplicantDTO.builder()
+                            .activityId(activity.getId())
                             .id(seeker.getId())
                             .firstName(seeker.getFirstName())
                             .lastName(seeker.getLastName())
@@ -158,6 +151,7 @@ public class JobPostService {
         return activities.map(activity -> {
             var jobPost = activity.getJobPost();
             return SeekerJobPostResponseDTO.builder()
+                    .activityId(activity.getId())
                     .jobPostId(jobPost.getId())
                     .title(jobPost.getTitle())
                     .companyName(jobPost.getCompany() != null ? jobPost.getCompany().getName() : null)
@@ -176,6 +170,93 @@ public class JobPostService {
             return new HasAppliedResponse(true, activity.getApplyDate());
         }
         return new HasAppliedResponse(false, null);
+    }
+
+    /**
+     * Update the status of a job application (JobPostActivity) by activity ID and company ID.
+     * @param activityId the ID of the job application activity
+     * @param newStatus the new status to set
+     * @param companyId the ID of the company (for ownership check)
+     * @return true if updated, false if not found or not owned by the company
+     */
+    public boolean updateJobPostActivityStatus(Integer activityId, String newStatus, Integer companyId) {
+        JobPostActivity activity = jobPostActivityRepository.findById(activityId).orElse(null);
+        if (activity == null) return false;
+        JobPost jobPost = activity.getJobPost();
+        if (jobPost == null || jobPost.getCompany() == null || !jobPost.getCompany().getId().equals(companyId)) {
+            return false;
+        }
+        activity.setStatus(newStatus);
+        activity.setDecisionAt(java.time.Instant.now());
+        jobPostActivityRepository.save(activity);
+        return true;
+    }
+
+    /**
+     * Soft delete a job post by id and company id. Only the owner company can delete.
+     * @param jobPostId the id of the job post
+     * @param companyId the id of the company
+     * @return true if updated, false if not found or not owned by the company
+     */
+    public boolean deleteJobPostByCompany(Integer jobPostId, Integer companyId) {
+        JobPost jobPost = jobPostRepository.findById(jobPostId).orElse(null);
+        if (jobPost == null || jobPost.getCompany() == null || !jobPost.getCompany().getId().equals(companyId)) {
+            return false;
+        }
+        jobPost.setActive(false);
+        jobPostRepository.save(jobPost);
+        return true;
+    }
+
+    /**
+     * Hard delete a job post by id and company id. Only the owner company can delete.
+     * @param jobPostId the id of the job post
+     * @param companyId the id of the company
+     * @return true if deleted, false if not found or not owned by the company
+     */
+    public boolean hardDeleteJobPostByCompany(Integer jobPostId, Integer companyId) {
+        JobPost jobPost = jobPostRepository.findById(jobPostId).orElse(null);
+        if (jobPost == null || jobPost.getCompany() == null || !jobPost.getCompany().getId().equals(companyId)) {
+            return false;
+        }
+        jobPostRepository.delete(jobPost);
+        return true;
+    }
+
+    public List<JobPost> getJobPosts(String active) {
+        Specification<JobPost> spec = (root, query, cb) -> cb.conjunction();
+        if (active != null && !"all".equalsIgnoreCase(active)) {
+            boolean isActive = !"false".equalsIgnoreCase(active);
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("isActive"), isActive));
+        }
+        return jobPostRepository.findAll(spec);
+    }
+
+    public List<JobPost> getJobPostsByCompanyId(int companyId, String active) {
+        Specification<JobPost> spec = (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId);
+        if (active != null && !"all".equalsIgnoreCase(active)) {
+            boolean isActive = !"false".equalsIgnoreCase(active);
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("isActive"), isActive));
+        }
+        return jobPostRepository.findAll(spec);
+    }
+
+    public Page<JobPost> getJobPostsByCompanyId(int companyId, int page, int size, String active) {
+        Specification<JobPost> spec = (root, query, cb) -> cb.equal(root.get("company").get("id"), companyId);
+        if (active != null && !"all".equalsIgnoreCase(active)) {
+            boolean isActive = !"false".equalsIgnoreCase(active);
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("isActive"), isActive));
+        }
+        return jobPostRepository.findAll(spec, PageRequest.of(page, size));
+    }
+
+    @Deprecated
+    public Page<JobPost> getJobPostsByCompanyId(int companyId, int page, int size) {
+        return getJobPostsByCompanyId(companyId, page, size, "true");
+    }
+
+    public JobPostMapper getJobPostMapper() {
+        return jobPostMapper;
     }
 
     public static class HasAppliedResponse {

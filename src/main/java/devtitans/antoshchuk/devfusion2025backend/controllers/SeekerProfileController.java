@@ -18,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/v1/seeker/profile")
@@ -288,6 +290,74 @@ public class SeekerProfileController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(false, "Error updating seeker profile: " + e.getMessage(), null));
+        }
+    }
+
+    @PostMapping(value = "/cv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Upload seeker's CV (PDF)",
+        description = "Uploads a PDF CV to Amazon S3 and updates the seeker's profile with the file link.",
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                schema = @Schema(type = "string", format = "binary", description = "PDF file to upload")
+            )
+        ),
+        responses = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "CV uploaded successfully",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
+                        {
+                          \"success\": true,
+                          \"message\": \"CV uploaded successfully\",
+                          \"data\": { \"cvUrl\": \"https://s3.amazonaws.com/bucket/cv/1/uuid.pdf\" }
+                        }
+                        """
+                    )
+                )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "Invalid file or request",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
+                        { \"success\": false, \"message\": \"Only PDF files are allowed\", \"data\": null }
+                        """
+                    )
+                )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "Unauthorized - Invalid or missing token",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
+                        { \"success\": false, \"message\": \"Unauthorized - Invalid or missing token\", \"data\": null }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    public ResponseEntity<?> uploadCv(@RequestParam("file") MultipartFile file, Authentication authentication) {
+        try {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            UserAccount userAccount = userDetails.getUser();
+            String url = seekerProfileService.uploadSeekerCv(userAccount.getId(), file);
+            return ResponseEntity.ok(new ApiResponse<>(true, "CV uploaded successfully", java.util.Map.of("cvUrl", url)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Error uploading CV: " + e.getMessage(), null));
         }
     }
 } 

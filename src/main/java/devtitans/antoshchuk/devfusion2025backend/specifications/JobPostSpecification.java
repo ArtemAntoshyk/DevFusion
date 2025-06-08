@@ -13,7 +13,8 @@ public class JobPostSpecification {
             String location,
             Integer jobType,
             Integer experience,
-            List<Integer> skillIds
+            List<Integer> skillIds,
+            String active
     ) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -43,6 +44,11 @@ public class JobPostSpecification {
 
             if (skillIds != null && !skillIds.isEmpty()) {
                 predicates.add(root.join("jobPostSkillSets").get("skill").get("id").in(skillIds));
+            }
+            
+            if (active != null && !"all".equalsIgnoreCase(active)) {
+                boolean isActive = !"false".equalsIgnoreCase(active);
+                predicates.add(criteriaBuilder.equal(root.get("isActive"), isActive));
             }
             
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

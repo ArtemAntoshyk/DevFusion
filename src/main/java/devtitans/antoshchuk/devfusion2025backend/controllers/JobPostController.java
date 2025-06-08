@@ -48,6 +48,8 @@ import devtitans.antoshchuk.devfusion2025backend.repositories.SeekerRepository;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPostActivity;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.CompanyJobPostShortDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.JobPostApplicantDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.request.JobPostActivityStatusUpdateRequestDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.StandardResponseDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -235,6 +237,7 @@ public class JobPostController {
                 sortDirection: Sort direction (ASC, DESC)
                 page: Page number (starts from 0)
                 size: Number of items per page (default: 6)
+                active: Filter by job post status (true/false)
                 """,
             schema = @Schema(implementation = JobPostFilterRequestDTO.class),
             examples = {
@@ -253,12 +256,13 @@ public class JobPostController {
             }
         )
         JobPostFilterRequestDTO filterRequest,
+        @RequestParam(defaultValue = "true") String active,
         Authentication authentication
     ) {
-        log.info("[getAllJobPosts] Called with params: searchQuery={}, location={}, jobType={}, experience={}, skillIds={}, page={}, size={}",
-            filterRequest.getSearchQuery(), filterRequest.getLocation(), filterRequest.getJobType(), filterRequest.getExperience(), filterRequest.getSkillIds(), filterRequest.getPage(), filterRequest.getSize());
+        log.info("[getAllJobPosts] Called with params: searchQuery={}, location={}, jobType={}, experience={}, skillIds={}, page={}, size={}, active={}",
+            filterRequest.getSearchQuery(), filterRequest.getLocation(), filterRequest.getJobType(), filterRequest.getExperience(), filterRequest.getSkillIds(), filterRequest.getPage(), filterRequest.getSize(), active);
         try {
-            Page<JobPostResponseDTO> result = jobPostService.getFilteredJobPosts(filterRequest);
+            Page<JobPostResponseDTO> result = jobPostService.getFilteredJobPosts(filterRequest, active);
             log.info("[getAllJobPosts] jobPostService.getFilteredJobPosts executed successfully");
             if (authentication != null && authentication.isAuthenticated()) {
                 log.info("[getAllJobPosts] User is authenticated");
@@ -277,18 +281,14 @@ public class JobPostController {
                         );
                         log.info("[getAllJobPosts] Search history saved for userId={}", user.getId());
                     } catch (Exception e) {
-                        log.error("[getAllJobPosts] Error while saving search history: {}", e.getMessage(), e);
+                        log.warn("[getAllJobPosts] Could not save search history: {}", e.getMessage());
                     }
-                } else {
-                    log.info("[getAllJobPosts] searchQuery is null, not saving search history");
                 }
-            } else {
-                log.info("[getAllJobPosts] User is not authenticated, not saving search history");
             }
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            log.error("[getAllJobPosts] Exception: {}", e.getMessage(), e);
-            throw e;
+            log.error("[getAllJobPosts] Exception: ", e);
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -738,7 +738,8 @@ public class JobPostController {
         parameters = {
             @Parameter(name = "companyId", description = "ID of the company", required = true, example = "1"),
             @Parameter(name = "page", description = "Page number (starts from 0)", example = "0", required = false),
-            @Parameter(name = "size", description = "Number of items per page", example = "6", required = false)
+            @Parameter(name = "size", description = "Number of items per page", example = "6", required = false),
+            @Parameter(name = "active", description = "Filter by job post status (true/false)", example = "true", required = false)
         },
         responses = {
             @ApiResponse(
@@ -759,9 +760,10 @@ public class JobPostController {
     public ResponseEntity<Page<JobPostResponseDTO>> getJobPostsByCompany(
             @PathVariable Integer companyId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "6") int size
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(defaultValue = "true") String active
     ) {
-        Page<JobPost> jobPosts = jobPostService.getJobPostsByCompanyId(companyId, page, size);
+        Page<JobPost> jobPosts = jobPostService.getJobPostsByCompanyId(companyId, page, size, active);
         Page<JobPostResponseDTO> response = jobPosts.map(jobPostService.getJobPostMapper()::toResponseDTO);
         return ResponseEntity.ok(response);
     }
@@ -818,7 +820,8 @@ public class JobPostController {
         description = "Returns paginated list of job posts for the authenticated company. Only for COMPANY users.",
         parameters = {
             @Parameter(name = "page", description = "Page number (starts from 0)", example = "0", required = false),
-            @Parameter(name = "size", description = "Number of items per page", example = "6", required = false)
+            @Parameter(name = "size", description = "Number of items per page", example = "6", required = false),
+            @Parameter(name = "active", description = "Filter by job post status (true/false)", example = "true", required = false)
         },
         responses = {
             @ApiResponse(responseCode = "200", description = "Successfully retrieved job posts")
@@ -827,13 +830,14 @@ public class JobPostController {
     @GetMapping("/my")
     public ResponseEntity<?> getMyJobPosts(Authentication authentication,
                                            @RequestParam(defaultValue = "0") int page,
-                                           @RequestParam(defaultValue = "6") int size) {
+                                           @RequestParam(defaultValue = "6") int size,
+                                           @RequestParam(defaultValue = "true") String active) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         UserAccount user = userDetails.getUser();
         if (!user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Only COMPANY users can view their job posts", "data", null));
         }
-        var result = jobPostService.getCompanyJobPosts(user.getCompany().getId(), page, size);
+        var result = jobPostService.getCompanyJobPosts(user.getCompany().getId(), page, size, active);
         return ResponseEntity.ok(Map.of("success", true, "data", result));
     }
 
@@ -882,5 +886,159 @@ public class JobPostController {
         }
         var applicants = jobPostService.getApplicantsForJobPost(user.getCompany().getId(), jobPostId);
         return ResponseEntity.ok(Map.of("success", true, "data", applicants));
+    }
+
+    @Operation(
+        summary = "Update job application (JobPostActivity) status",
+        description = "Allows an authenticated COMPANY user to update the status of a job application (JobPostActivity) by its id. Only the company-owner of the vacancy can update.",
+        requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            content = @Content(
+                schema = @Schema(implementation = JobPostActivityStatusUpdateRequestDTO.class),
+                examples = @ExampleObject(value = "{\"activityId\": 123, \"status\": \"Reviewed\"}")
+            )
+        ),
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Status updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request or not allowed"),
+            @ApiResponse(responseCode = "403", description = "Only COMPANY users can update status")
+        }
+    )
+    @PostMapping("/activity/update-status")
+    @PreAuthorize("hasRole('COMPANY')")
+    public ResponseEntity<StandardResponseDTO<Void>> updateJobPostActivityStatus(
+            @RequestBody JobPostActivityStatusUpdateRequestDTO request,
+            Authentication authentication) {
+        try {
+            log.info("[updateJobPostActivityStatus] Request: activityId={}, status={}", request.getActivityId(), request.getStatus());
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.warn("[updateJobPostActivityStatus] Unauthorized: authentication is null or not authenticated");
+                return ResponseEntity.status(401).body(StandardResponseDTO.error("Unauthorized"));
+            }
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            UserAccount user = userDetails.getUser();
+            log.info("[updateJobPostActivityStatus] User: id={}, email={}, userType={}, company={}",
+                    user.getId(), user.getEmail(),
+                    user.getUserType() != null ? user.getUserType().getName() : null,
+                    user.getCompany() != null ? user.getCompany().getId() : null);
+            if (user.getUserType() == null) {
+                log.error("[updateJobPostActivityStatus] UserType is null for user id={}", user.getId());
+                return ResponseEntity.status(500).body(StandardResponseDTO.error("User type is null"));
+            }
+            if (!user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
+                log.warn("[updateJobPostActivityStatus] Forbidden: not a company or company is null");
+                return ResponseEntity.status(403).body(StandardResponseDTO.error("Only COMPANY users can update status"));
+            }
+            boolean updated = jobPostService.updateJobPostActivityStatus(
+                    request.getActivityId(),
+                    request.getStatus(),
+                    user.getCompany().getId()
+            );
+            log.info("[updateJobPostActivityStatus] Update result: {}", updated);
+            if (updated) {
+                return ResponseEntity.ok(StandardResponseDTO.success(null));
+            } else {
+                log.warn("[updateJobPostActivityStatus] Not found or not allowed: activityId={}, companyId={}",
+                        request.getActivityId(), user.getCompany().getId());
+                return ResponseEntity.status(400).body(StandardResponseDTO.error("Not found or not allowed"));
+            }
+        } catch (Exception e) {
+            log.error("[updateJobPostActivityStatus] Exception: ", e);
+            return ResponseEntity.status(500).body(StandardResponseDTO.error("Internal server error: " + e.getMessage()));
+        }
+    }
+
+    @Operation(
+        summary = "Delete a job post (only for company-owner)",
+        description = "Allows an authenticated COMPANY user to delete their own job post by id. Only the company-owner can delete.",
+        parameters = {
+            @Parameter(name = "jobPostId", description = "Job post ID", required = true, example = "123")
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Job post deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Job post not found or not owned by company"),
+            @ApiResponse(responseCode = "403", description = "Only COMPANY users can delete job posts")
+        }
+    )
+    @DeleteMapping("/{jobPostId}")
+    @PreAuthorize("hasRole('COMPANY')")
+    public ResponseEntity<StandardResponseDTO<Void>> deleteJobPost(
+            @PathVariable Integer jobPostId,
+            Authentication authentication) {
+        try {
+            log.info("[deleteJobPost] Request: jobPostId={}", jobPostId);
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.warn("[deleteJobPost] Unauthorized: authentication is null or not authenticated");
+                return ResponseEntity.status(401).body(StandardResponseDTO.error("Unauthorized"));
+            }
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            UserAccount user = userDetails.getUser();
+            log.info("[deleteJobPost] User: id={}, email={}, userType={}, company={}",
+                    user.getId(), user.getEmail(),
+                    user.getUserType() != null ? user.getUserType().getName() : null,
+                    user.getCompany() != null ? user.getCompany().getId() : null);
+            if (user.getUserType() == null || !user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
+                log.warn("[deleteJobPost] Forbidden: not a company or company is null");
+                return ResponseEntity.status(403).body(StandardResponseDTO.error("Only COMPANY users can delete job posts"));
+            }
+            boolean deleted = jobPostService.deleteJobPostByCompany(jobPostId, user.getCompany().getId());
+            log.info("[deleteJobPost] Delete result: {}", deleted);
+            if (deleted) {
+                return ResponseEntity.ok(StandardResponseDTO.success(null));
+            } else {
+                log.warn("[deleteJobPost] Not found or not allowed: jobPostId={}, companyId={}", jobPostId, user.getCompany().getId());
+                return ResponseEntity.status(404).body(StandardResponseDTO.error("Job post not found or not owned by company"));
+            }
+        } catch (Exception e) {
+            log.error("[deleteJobPost] Exception: ", e);
+            return ResponseEntity.status(500).body(StandardResponseDTO.error("Internal server error: " + e.getMessage()));
+        }
+    }
+
+    @Operation(
+        summary = "Hard delete a job post (only for company-owner)",
+        description = "Allows an authenticated COMPANY user to hard delete their own job post by id. Only the company-owner can delete. This will permanently remove the job post.",
+        parameters = {
+            @Parameter(name = "jobPostId", description = "Job post ID", required = true, example = "123")
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Job post hard deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Job post not found or not owned by company"),
+            @ApiResponse(responseCode = "403", description = "Only COMPANY users can delete job posts")
+        }
+    )
+    @DeleteMapping("/{jobPostId}/hard")
+    @PreAuthorize("hasRole('COMPANY')")
+    public ResponseEntity<StandardResponseDTO<Void>> hardDeleteJobPost(
+            @PathVariable Integer jobPostId,
+            Authentication authentication) {
+        try {
+            log.info("[hardDeleteJobPost] Request: jobPostId={}", jobPostId);
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.warn("[hardDeleteJobPost] Unauthorized: authentication is null or not authenticated");
+                return ResponseEntity.status(401).body(StandardResponseDTO.error("Unauthorized"));
+            }
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            UserAccount user = userDetails.getUser();
+            log.info("[hardDeleteJobPost] User: id={}, email={}, userType={}, company={}",
+                    user.getId(), user.getEmail(),
+                    user.getUserType() != null ? user.getUserType().getName() : null,
+                    user.getCompany() != null ? user.getCompany().getId() : null);
+            if (user.getUserType() == null || !user.getUserType().getName().equalsIgnoreCase("COMPANY") || user.getCompany() == null) {
+                log.warn("[hardDeleteJobPost] Forbidden: not a company or company is null");
+                return ResponseEntity.status(403).body(StandardResponseDTO.error("Only COMPANY users can delete job posts"));
+            }
+            boolean deleted = jobPostService.hardDeleteJobPostByCompany(jobPostId, user.getCompany().getId());
+            log.info("[hardDeleteJobPost] Delete result: {}", deleted);
+            if (deleted) {
+                return ResponseEntity.ok(StandardResponseDTO.success(null));
+            } else {
+                log.warn("[hardDeleteJobPost] Not found or not allowed: jobPostId={}, companyId={}", jobPostId, user.getCompany().getId());
+                return ResponseEntity.status(404).body(StandardResponseDTO.error("Job post not found or not owned by company"));
+            }
+        } catch (Exception e) {
+            log.error("[hardDeleteJobPost] Exception: ", e);
+            return ResponseEntity.status(500).body(StandardResponseDTO.error("Internal server error: " + e.getMessage()));
+        }
     }
 }
