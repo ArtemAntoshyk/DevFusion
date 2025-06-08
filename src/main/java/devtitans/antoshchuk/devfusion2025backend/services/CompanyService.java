@@ -19,6 +19,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
+import com.amazonaws.services.s3.AmazonS3;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.UUID;
+import java.io.IOException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +33,10 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final UserAccountRepository userAccountRepository;
     private CompanyMapper companyMapper;
+    @Autowired
+    private AmazonS3 amazonS3;
+    @Autowired
+    private String s3BucketName;
     @Autowired
     public CompanyService(CompanyRepository companyRepository, UserAccountRepository userAccountRepository, CompanyMapper companyMapper) {
         this.companyRepository = companyRepository;
@@ -172,10 +180,6 @@ public class CompanyService {
             log.debug("Updating business stream from '{}' to '{}'", company.getBusinessStreamName(), updateRequest.getBusinessStreamName());
             company.setBusinessStreamName(updateRequest.getBusinessStreamName());
         }
-        if (updateRequest.getCompanyLogo() != null) {
-            log.debug("Updating company logo");
-            company.setLogo(updateRequest.getCompanyLogo());
-        }
         if (updateRequest.getCompanyDescription() != null) {
             log.debug("Updating company description");
             company.setCompanyDescription(updateRequest.getCompanyDescription());
@@ -189,15 +193,36 @@ public class CompanyService {
             company.setEstablishmentDate(updateRequest.getEstablishmentDate());
         }
 
-        // Update company images if provided
-        if (updateRequest.getCompanyImages() != null) {
-            log.debug("Updating company images. Old count: {}, New count: {}", 
-                company.getCompanyImages().size(), updateRequest.getCompanyImages().size());
+        // companyLogo upload
+        MultipartFile logoFile = updateRequest.getCompanyLogo();
+        if (logoFile != null && !logoFile.isEmpty()) {
+            String logoKey = "company/logo/" + company.getId() + "/" + UUID.randomUUID() + "_" + logoFile.getOriginalFilename();
+            try {
+                amazonS3.putObject(s3BucketName, logoKey, logoFile.getInputStream(), null);
+                String logoUrl = amazonS3.getUrl(s3BucketName, logoKey).toString();
+                company.setLogo(logoUrl);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload company logo", e);
+            }
+        }
+
+        // companyImages upload
+        List<MultipartFile> imageFiles = updateRequest.getCompanyImages();
+        if (imageFiles != null && !imageFiles.isEmpty()) {
             company.getCompanyImages().clear();
-            updateRequest.getCompanyImages().forEach(imageUrl -> {
-                CompanyImage image = new CompanyImage(company, imageUrl);
-                company.addCompanyImage(image);
-            });
+            for (MultipartFile imageFile : imageFiles) {
+                if (imageFile != null && !imageFile.isEmpty()) {
+                    String imageKey = "company/images/" + company.getId() + "/" + UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
+                    try {
+                        amazonS3.putObject(s3BucketName, imageKey, imageFile.getInputStream(), null);
+                        String imageUrl = amazonS3.getUrl(s3BucketName, imageKey).toString();
+                        CompanyImage image = new CompanyImage(company, imageUrl);
+                        company.addCompanyImage(image);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to upload company image", e);
+                    }
+                }
+            }
         }
 
         // Update user contact information
@@ -216,21 +241,6 @@ public class CompanyService {
         userAccountRepository.save(userAccount);
         log.debug("Successfully saved company profile with ID: {}", savedCompany.getId());
 
-        // Create and return updated profile
-        CompanyProfileResponseDTO dto = new CompanyProfileResponseDTO();
-        dto.setId(savedCompany.getId());
-        dto.setName(savedCompany.getName());
-        dto.setBusinessStreamName(savedCompany.getBusinessStreamName());
-        dto.setCompanyLogo(savedCompany.getLogo());
-        dto.setCompanyDescription(savedCompany.getCompanyDescription());
-        dto.setCompanyWebsiteUrl(savedCompany.getCompanyWebsiteUrl());
-        dto.setEstablishmentDate(savedCompany.getEstablishmentDate());
-        dto.setCompanyImages(savedCompany.getCompanyImages().stream()
-            .map(CompanyImage::getCompany_image)
-            .collect(Collectors.toList()));
-        dto.setEmail(savedCompany.getUser().getEmail());
-        dto.setContactNumber(savedCompany.getUser().getContactNumber());
-        log.debug("Successfully mapped updated company to DTO");
-        return dto;
+        return getCompanyProfile(userAccountId);
     }
 }

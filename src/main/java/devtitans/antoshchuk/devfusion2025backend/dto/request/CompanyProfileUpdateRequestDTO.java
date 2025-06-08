@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,8 +21,7 @@ public class CompanyProfileUpdateRequestDTO {
     @Size(min = 2, max = 100, message = "Business stream name must be between 2 and 100 characters")
     private String businessStreamName;
 
-    @Size(max = 500, message = "Company logo URL must not exceed 500 characters")
-    private String companyLogo;
+    private MultipartFile companyLogo;
 
     @Size(max = 2000, message = "Company description must not exceed 2000 characters")
     private String companyDescription;
@@ -33,7 +33,7 @@ public class CompanyProfileUpdateRequestDTO {
 
     private LocalDate establishmentDate;
 
-    private List<String> companyImages;
+    private List<MultipartFile> companyImages;
 
     @Email(message = "Invalid email format")
     @Size(max = 100, message = "Email must not exceed 100 characters")

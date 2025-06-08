@@ -30,7 +30,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.equals("/api/auth/login") ||
             (path.startsWith("/api/v1/companies")) ||
             (path.startsWith("/api/v1/job-posts")) ||
-            (path.startsWith("/api/v1/statistics/companies"));
+            (path.startsWith("/api/v1/statistics/companies")) ||
+            path.equals("/api/v1/recommend");
 
         String token = jwtTokenProvider.resolveToken(request);
         System.out.println("[JwtAuthenticationFilter] path=" + path + ", isPublic=" + isPublic + ", token=" + (token != null));

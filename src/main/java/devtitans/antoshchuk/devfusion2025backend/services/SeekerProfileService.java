@@ -14,6 +14,11 @@ import devtitans.antoshchuk.devfusion2025backend.repositories.SkillRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.amazonaws.services.s3.AmazonS3;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.io.IOException;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +27,10 @@ public class SeekerProfileService {
     private final SeekerRepository seekerRepository;
     private final UserAccountRepository userAccountRepository;
     private final SkillRepository skillRepository;
+    @Autowired
+    private AmazonS3 amazonS3;
+    @Autowired
+    private String s3BucketName;
 
     @Transactional(readOnly = true)
     public SeekerProfileResponseDTO getSeekerProfile(Integer userId) {
@@ -138,5 +147,28 @@ public class SeekerProfileService {
     private void updateUserAccountFromDTO(UserAccount userAccount, SeekerProfileRequestDTO dto) {
         userAccount.setEmail(dto.getEmail());
         userAccount.setContactNumber(dto.getContactNumber());
+    }
+
+    public String uploadSeekerCv(Integer userId, MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+        if (!file.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
+            throw new IllegalArgumentException("Only PDF files are allowed");
+        }
+        UserAccount userAccount = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Seeker seeker = userAccount.getSeeker();
+        if (seeker == null) {
+            seeker = new Seeker();
+            seeker.setUserAccount(userAccount);
+            userAccount.setSeeker(seeker);
+        }
+        String key = "cv/" + userId + "/" + UUID.randomUUID() + ".pdf";
+        amazonS3.putObject(s3BucketName, key, file.getInputStream(), null);
+        String fileUrl = amazonS3.getUrl(s3BucketName, key).toString();
+        seeker.setCvUrl(fileUrl);
+        seekerRepository.save(seeker);
+        return fileUrl;
     }
 } 

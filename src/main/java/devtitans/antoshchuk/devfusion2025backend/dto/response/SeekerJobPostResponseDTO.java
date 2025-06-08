@@ -9,6 +9,7 @@ import java.util.Date;
 @AllArgsConstructor
 @Builder
 public class SeekerJobPostResponseDTO {
+    private Integer activityId;
     private Integer jobPostId;
     private String title;
     private String companyName;
