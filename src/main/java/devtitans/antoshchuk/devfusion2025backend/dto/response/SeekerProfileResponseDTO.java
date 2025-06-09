@@ -42,13 +42,13 @@ public class SeekerProfileResponseDTO {
     private String contactNumber;
 
     @Schema(description = "List of skills")
-    private List<SeekerSkillDTO> skills;
+    private List<SeekerSkillSetDTO> skills;
 
     @Schema(description = "List of education details")
-    private List<EducationDTO> education;
+    private List<EducationDetailDTO> education;
 
     @Schema(description = "List of experience details")
-    private List<ExperienceDTO> experience;
+    private List<ExperienceDetailDTO> experience;
 
     @Schema(description = "Registration date", example = "2024-01-01T00:00:00")
     private Date registrationDate;
@@ -56,30 +56,35 @@ public class SeekerProfileResponseDTO {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class SeekerSkillDTO {
-        private String skillName;
-        private String proficiencyLevel;
+    public static class SeekerSkillSetDTO {
+        private Integer skillId;
+        private Short skillLevel;
+        private String description;
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class EducationDTO {
-        private String degree;
+    public static class EducationDetailDTO {
+        private Integer certificateDegreeId;
         private String major;
-        private String institution;
+        private String instituteOrUniversityName;
+        private String startDate;
+        private String completionDate;
+        private Integer cgpa;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ExperienceDetailDTO {
+        private Boolean isCurrentJob;
         private String startDate;
         private String endDate;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class ExperienceDTO {
         private String jobTitle;
         private String companyName;
-        private String startDate;
-        private String endDate;
+        private String jobLocationCity;
+        private String jobLocationCountry;
         private String description;
     }
 } 

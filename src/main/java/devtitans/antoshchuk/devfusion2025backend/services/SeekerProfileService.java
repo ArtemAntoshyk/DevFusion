@@ -25,9 +25,9 @@ import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import java.util.Date;
 import java.util.stream.Collectors;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.SeekerSkillDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.EducationDTO;
-import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.ExperienceDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.SeekerSkillSetDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.EducationDetailDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.ExperienceDetailDTO;
 
 @Service
 @RequiredArgsConstructor
@@ -94,26 +94,31 @@ public class SeekerProfileService {
         dto.setContactNumber(seeker.getUserAccount().getContactNumber());
         // skills
         dto.setSkills(seeker.getSeekerSkillSets() == null ? null : seeker.getSeekerSkillSets().stream()
-            .map(skillSet -> new SeekerSkillDTO(
-                skillSet.getSkill() != null ? skillSet.getSkill().getName() : null,
-                skillSet.getSkillLevel() != null ? skillLevelToString(skillSet.getSkillLevel()) : null
+            .map(skillSet -> new SeekerSkillSetDTO(
+                skillSet.getSkill() != null ? skillSet.getSkill().getId() : null,
+                skillSet.getSkillLevel(),
+                skillSet.getDescription()
             )).collect(Collectors.toList()));
         // education
         dto.setEducation(seeker.getEducationDetails() == null ? null : seeker.getEducationDetails().stream()
-            .map(edu -> new EducationDTO(
-                edu.getCertificateDegree() != null ? edu.getCertificateDegree().getName() : null,
+            .map(edu -> new EducationDetailDTO(
+                edu.getCertificateDegree() != null ? edu.getCertificateDegree().getId() : null,
                 edu.getMajor(),
                 edu.getInstituteOrUniversityName(),
                 edu.getStartDate() != null ? edu.getStartDate().toString() : null,
-                edu.getCompletionDate() != null ? edu.getCompletionDate().toString() : null
+                edu.getCompletionDate() != null ? edu.getCompletionDate().toString() : null,
+                edu.getCgpa()
             )).collect(Collectors.toList()));
         // experience
         dto.setExperience(seeker.getExperienceDetails() == null ? null : seeker.getExperienceDetails().stream()
-            .map(exp -> new ExperienceDTO(
-                exp.getJobTitle(),
-                exp.getCompanyName(),
+            .map(exp -> new ExperienceDetailDTO(
+                exp.isCurrentJob(),
                 exp.getStartDate() != null ? exp.getStartDate().toString() : null,
                 exp.getEndDate() != null ? exp.getEndDate().toString() : null,
+                exp.getJobTitle(),
+                exp.getCompanyName(),
+                exp.getJobLocationCity(),
+                exp.getJobLocationCounty(),
                 exp.getDescription()
             )).collect(Collectors.toList()));
         dto.setRegistrationDate(seeker.getUserAccount().getRegistrationDate());
