@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -20,6 +21,7 @@ public class SeekerSkillSet {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seeker_id", referencedColumnName = "id")
+    @JsonIgnore
     private Seeker seeker;
 
     @ManyToOne(fetch = FetchType.LAZY)

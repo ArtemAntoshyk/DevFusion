@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public class UserType {
     private String name;
 
     @OneToMany(mappedBy = "userType")
+    @JsonIgnore
     private List<UserAccount> userAccounts;
 
     public UserType(String name) {
