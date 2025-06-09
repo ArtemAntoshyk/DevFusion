@@ -7,6 +7,11 @@ import devtitans.antoshchuk.devfusion2025backend.util.mappers.SeekerMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import devtitans.antoshchuk.devfusion2025backend.specifications.SeekerSpecification;
+import java.util.stream.Collectors;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,5 +43,15 @@ public class SeekerService {
 
     public Seeker createSeeker(Seeker seeker) {
         return seekerRepository.save(seeker);
+    }
+
+    public Page<SeekerProfileResponseDTO> searchSeekers(String query, List<Integer> skillIds, Pageable pageable) {
+        var spec = SeekerSpecification.filterByQueryAndSkills(query, skillIds);
+        return seekerRepository.findAll(spec, pageable)
+                .map(seeker -> seekerMapper.toProfileResponseDTO(seeker));
+    }
+
+    public SeekerProfileResponseDTO getSeekerProfileResponseDTO(Seeker seeker) {
+        return seekerMapper.toProfileResponseDTO(seeker);
     }
 }

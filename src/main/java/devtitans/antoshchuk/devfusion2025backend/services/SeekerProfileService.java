@@ -94,6 +94,7 @@ public class SeekerProfileService {
         dto.setCvUrl(seeker.getCvUrl());
         dto.setEmail(seeker.getUserAccount().getEmail());
         dto.setContactNumber(seeker.getUserAccount().getContactNumber());
+        dto.setSeekerTitle(seeker.getSeekerTitle());
         // skills
         dto.setSkills(seeker.getSeekerSkillSets() == null ? null : seeker.getSeekerSkillSets().stream()
             .map(skillSet -> new SeekerSkillSetDTO(
@@ -145,6 +146,7 @@ public class SeekerProfileService {
         seeker.setDateOfBirth(dto.getDateOfBirth());
         seeker.setCurrentMonthlySalary(dto.getCurrentMonthlySalary());
         seeker.setCvUrl(dto.getCvUrl());
+        seeker.setSeekerTitle(dto.getSeekerTitle());
 
         // Update skills
         if (dto.getSkills() != null) {

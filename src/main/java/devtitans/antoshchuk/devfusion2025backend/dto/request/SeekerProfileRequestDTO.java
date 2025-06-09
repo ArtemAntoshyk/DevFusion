@@ -53,6 +53,9 @@ public class SeekerProfileRequestDTO {
     @Schema(description = "List of experience details")
     private List<ExperienceDetailDTO> experience;
 
+    @Schema(description = "Seeker title (headline)", example = "Senior Java Developer")
+    private String seekerTitle;
+
     @Data
     public static class SeekerSkillSetDTO {
         @Schema(description = "Skill ID", example = "1")

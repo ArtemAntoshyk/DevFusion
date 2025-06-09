@@ -6,6 +6,7 @@ import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileRespo
 import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
 import devtitans.antoshchuk.devfusion2025backend.security.detail.CustomUserDetails;
 import devtitans.antoshchuk.devfusion2025backend.services.SeekerProfileService;
+import devtitans.antoshchuk.devfusion2025backend.services.SeekerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -15,11 +16,17 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/seeker/profile")
@@ -50,6 +57,7 @@ import org.springframework.http.MediaType;
 public class SeekerProfileController {
 
     private final SeekerProfileService seekerProfileService;
+    private final SeekerService seekerService;
 
     @GetMapping
     @Operation(
@@ -74,6 +82,7 @@ public class SeekerProfileController {
                                 "dateOfBirth": "1990-01-01",
                                 "currentMonthlySalary": 5000.0,
                                 "cvUrl": "https://example.com/cv.pdf",
+                                "seekerTitle": "Senior Java Developer",
                                 "email": "john.doe@example.com",
                                 "contactNumber": "+380501234567",
                                 "skills": [
@@ -159,6 +168,7 @@ public class SeekerProfileController {
                         "dateOfBirth": "1990-01-01",
                         "currentMonthlySalary": 5000.0,
                         "cvUrl": "https://example.com/cv.pdf",
+                        "seekerTitle": "Senior Java Developer",
                         "email": "john.doe@example.com",
                         "contactNumber": "+380501234567",
                         "skills": [
@@ -211,6 +221,7 @@ public class SeekerProfileController {
                                 "dateOfBirth": "1990-01-01",
                                 "currentMonthlySalary": 5000.0,
                                 "cvUrl": "https://example.com/cv.pdf",
+                                "seekerTitle": "Senior Java Developer",
                                 "email": "john.doe@example.com",
                                 "contactNumber": "+380501234567",
                                 "skills": [
@@ -359,5 +370,144 @@ public class SeekerProfileController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body(new ApiResponse<>(false, "Error uploading CV: " + e.getMessage(), null));
         }
+    }
+
+    @GetMapping("/api/v1/seekers")
+    @Operation(
+        summary = "Get paginated list of seekers with optional search and skill filters",
+        description = "Returns a paginated list of seekers. Supports search by query (name, surname, title) and filtering by skill IDs.",
+        parameters = {
+            @io.swagger.v3.oas.annotations.Parameter(name = "page", description = "Page number (zero-based)", example = "0"),
+            @io.swagger.v3.oas.annotations.Parameter(name = "size", description = "Page size", example = "6"),
+            @io.swagger.v3.oas.annotations.Parameter(name = "query", description = "Search query (name, surname, title)", example = "java"),
+            @io.swagger.v3.oas.annotations.Parameter(name = "skillIds", description = "Comma-separated skill IDs", example = "1,2,3")
+        },
+        responses = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "Successfully returned paginated seekers list",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = SeekerProfileResponseDTO.class, type = "array"),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          "content": [
+                            {
+                              "id": 1,
+                              "firstName": "John",
+                              "lastName": "Doe",
+                              "dateOfBirth": "1990-01-01",
+                              "currentMonthlySalary": 5000.0,
+                              "cvUrl": "https://example.com/cv.pdf",
+                              "seekerTitle": "Senior Java Developer",
+                              "email": "john.doe@example.com",
+                              "contactNumber": "+380501234567",
+                              "skills": [
+                                {"skillId": 1, "skillLevel": 5, "description": "Java expert"}
+                              ],
+                              "education": [
+                                {"certificateDegreeId": 1, "major": "Computer Science", "instituteOrUniversityName": "University of Kyiv", "startDate": "2010-09-01", "completionDate": "2014-06-30", "cgpa": 90}
+                              ],
+                              "experience": [
+                                {"isCurrentJob": true, "startDate": "2018-01-01", "endDate": "2023-12-31", "jobTitle": "Senior Java Developer", "companyName": "Tech Solutions", "jobLocationCity": "Kyiv", "jobLocationCountry": "Ukraine", "description": "Led development of enterprise applications"}
+                              ],
+                              "registrationDate": "2024-01-01T00:00:00"
+                            }
+                          ],
+                          "pageable": {"pageNumber": 0, "pageSize": 6},
+                          "totalElements": 1,
+                          "totalPages": 1
+                        }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    public ResponseEntity<Page<SeekerProfileResponseDTO>> getSeekers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String skillIds
+    ) {
+        List<Integer> skillIdList = (skillIds == null || skillIds.isBlank()) ? List.of() :
+                Arrays.stream(skillIds.split(",")).map(String::trim).filter(s -> !s.isEmpty()).map(Integer::parseInt).collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size);
+        Page<SeekerProfileResponseDTO> result = seekerService.searchSeekers(query, skillIdList, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/api/v1/seekers/{id}")
+    @Operation(
+        summary = "Get full seeker profile by id",
+        description = "Returns the full profile of a seeker by their id.",
+        parameters = {
+            @io.swagger.v3.oas.annotations.Parameter(name = "id", description = "Seeker id", required = true, example = "1")
+        },
+        responses = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "Successfully returned seeker profile",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = SeekerProfileResponseDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          "success": true,
+                          "message": "Seeker profile retrieved successfully",
+                          "data": {
+                            "id": 1,
+                            "firstName": "John",
+                            "lastName": "Doe",
+                            "dateOfBirth": "1990-01-01",
+                            "currentMonthlySalary": 5000.0,
+                            "cvUrl": "https://example.com/cv.pdf",
+                            "seekerTitle": "Senior Java Developer",
+                            "email": "john.doe@example.com",
+                            "contactNumber": "+380501234567",
+                            "skills": [
+                              {"skillId": 1, "skillLevel": 5, "description": "Java expert"}
+                            ],
+                            "education": [
+                              {"certificateDegreeId": 1, "major": "Computer Science", "instituteOrUniversityName": "University of Kyiv", "startDate": "2010-09-01", "completionDate": "2014-06-30", "cgpa": 90}
+                            ],
+                            "experience": [
+                              {"isCurrentJob": true, "startDate": "2018-01-01", "endDate": "2023-12-31", "jobTitle": "Senior Java Developer", "companyName": "Tech Solutions", "jobLocationCity": "Kyiv", "jobLocationCountry": "Ukraine", "description": "Led development of enterprise applications"}
+                            ],
+                            "registrationDate": "2024-01-01T00:00:00"
+                          }
+                        }
+                        """
+                    )
+                )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "404",
+                description = "Seeker not found",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(
+                        example = """
+                        {
+                          "success": false,
+                          "message": "Seeker not found",
+                          "data": null
+                        }
+                        """
+                    )
+                )
+            )
+        }
+    )
+    public ResponseEntity<?> getSeekerProfileById(@PathVariable Integer id) {
+        var seekerOpt = seekerService.getSeekerById(id);
+        if (seekerOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(false, "Seeker not found", null));
+        }
+        var seeker = seekerOpt.get();
+        var dto = seekerService.getSeekerProfileResponseDTO(seeker);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Seeker profile retrieved successfully", dto));
     }
 } 

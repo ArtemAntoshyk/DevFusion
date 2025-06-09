@@ -53,6 +53,9 @@ public class SeekerProfileResponseDTO {
     @Schema(description = "Registration date", example = "2024-01-01T00:00:00")
     private Date registrationDate;
 
+    @Schema(description = "Seeker title (headline)", example = "Senior Java Developer")
+    private String seekerTitle;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

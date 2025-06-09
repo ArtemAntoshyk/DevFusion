@@ -74,7 +74,6 @@ public class RecommendationController {
         String query = (String) requestBody.getOrDefault("query", "");
         long totalJobs = jobPostService.countAllJobPosts();
 
-        // Формируем запрос к внешнему сервису
         Map<String, Object> recommendRequest = Map.of(
                 "query", query,
                 "top_k", (int) totalJobs,
@@ -82,23 +81,19 @@ public class RecommendationController {
                 "allowed_ids", Collections.emptyList()
         );
 
-        // Получаем список id вакансий от рекомендательной системы
         List<Integer> recommendedIds = restTemplate.postForObject(recommendationServiceUrl, recommendRequest, List.class);
         if (recommendedIds == null) {
             recommendedIds = Collections.emptyList();
         }
 
-        // Получаем все вакансии по id, которые реально есть в БД
         final List<Integer> recommendedIdsFinal = recommendedIds;
         List<JobPost> allJobPosts = jobPostService.getJobPosts().stream()
                 .filter(jp -> recommendedIdsFinal.contains(jp.getId()))
                 .collect(Collectors.toList());
         Map<Integer, JobPost> jobPostMap = allJobPosts.stream().collect(Collectors.toMap(JobPost::getId, jp -> jp));
-        // Собираем id, которые реально есть в БД, в правильном порядке
         List<Integer> existingIds = recommendedIdsFinal.stream()
                 .filter(jobPostMap::containsKey)
                 .collect(Collectors.toList());
-        // Пагинируем по существующим id
         List<JobPostResponseDTO> jobs = existingIds.stream()
                 .skip((long) page * size)
                 .limit(size)
