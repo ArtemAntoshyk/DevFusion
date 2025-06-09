@@ -7,6 +7,8 @@ import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.services.RecommendationService;
 import devtitans.antoshchuk.devfusion2025backend.util.mappers.JobPostMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +18,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import devtitans.antoshchuk.devfusion2025backend.dto.request.FilteredRecommendRequest;
 
 @RestController
 @RequestMapping("/api/v1/recommend")
@@ -23,7 +28,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 public class RecommendationController {
     private final RecommendationService recommendationService;
     private final JobPostMapper jobPostMapper;
-
+    @PostMapping("/filtered/raw")
+    public void debugRaw(@RequestBody String raw) {
+        System.out.println("RAW BODY: " + raw);
+    }
     @PostMapping
     @Operation(
         summary = "Get job recommendations",
@@ -133,24 +141,23 @@ public class RecommendationController {
         // Сценарий 1: поиск без фильтров
         else {
             allowedIds = new ArrayList<>();
+            // topK = количество всех вакансий
+            topK = recommendationService.getAllJobPostsCount();
         }
 
         List<Integer> recommendedIds = recommendationService.getRecommendedIds(query, topK, threshold, allowedIds);
-        List<JobPost> posts = recommendationService.getJobPostsByIds(recommendedIds);
-        List<JobPostResponseDTO> dtos = posts.stream().map(jobPostMapper::toResponseDTO).toList();
-
-        // Пагинация
         int page = req.getPage() != null ? req.getPage() : 0;
-        int size = req.getSize() != null ? req.getSize() : 10;
-        int from = Math.min(page * size, dtos.size());
-        int to = Math.min(from + size, dtos.size());
-        List<JobPostResponseDTO> paged = dtos.subList(from, to);
-
+        int size = req.getSize() != null ? req.getSize() : 6;
+        int from = Math.min(page * size, recommendedIds.size());
+        int to = Math.min(from + size, recommendedIds.size());
+        List<Integer> pageIds = recommendedIds.subList(from, to);
+        List<JobPost> posts = recommendationService.getJobPostsByIds(pageIds);
+        List<JobPostResponseDTO> paged = posts.stream().map(jobPostMapper::toResponseDTO).toList();
         RecommendationResponseDTO resp = new RecommendationResponseDTO();
         resp.setJobs(paged);
         resp.setPage(page);
         resp.setSize(size);
-        resp.setTotal(dtos.size());
+        resp.setTotal(recommendedIds.size());
         return resp;
     }
 
@@ -213,7 +220,7 @@ public class RecommendationController {
             }
             allowedIds = new ArrayList<>();
             // topK не ограничиваем (внешняя система сама ограничит)
-        } else if ((tagIds != null && !tagIds.isEmpty()) || (categoryIds != null && !categoryIds.isEmpty())) {
+        } else if ((categoryIds != null && !categoryIds.isEmpty()) || (tagIds != null && !tagIds.isEmpty())) {
             allowedIds = recommendationService.getAllowedIds(categoryIds, tagIds);
             if (actualQuery == null || actualQuery.isBlank()) {
                 throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Query is required for search with filters");
@@ -228,16 +235,159 @@ public class RecommendationController {
             topK = recommendationService.getAllJobPostsCount();
         }
         List<Integer> recommendedIds = recommendationService.getRecommendedIds(actualQuery, topK, null, allowedIds);
-        List<JobPost> posts = recommendationService.getJobPostsByIds(recommendedIds);
-        List<JobPostResponseDTO> dtos = posts.stream().map(jobPostMapper::toResponseDTO).toList();
-        int from = Math.min(page * size, dtos.size());
-        int to = Math.min(from + size, dtos.size());
-        List<JobPostResponseDTO> paged = dtos.subList(from, to);
+        int from = Math.min(page * size, recommendedIds.size());
+        int to = Math.min(from + size, recommendedIds.size());
+        List<Integer> pageIds = recommendedIds.subList(from, to);
+        List<JobPost> posts = recommendationService.getJobPostsByIds(pageIds);
+        List<JobPostResponseDTO> paged = posts.stream().map(jobPostMapper::toResponseDTO).toList();
         RecommendationResponseDTO resp = new RecommendationResponseDTO();
         resp.setJobs(paged);
         resp.setPage(page);
         resp.setSize(size);
-        resp.setTotal(dtos.size());
+        resp.setTotal(recommendedIds.size());
+        return resp;
+    }
+
+    @PostMapping(value = "/simple", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public RecommendationResponseDTO simpleRecommend(@RequestBody Map<String, Object> req) {
+        String query = (String) req.get("query");
+        Integer page = req.get("page") != null ? (Integer) req.get("page") : 0;
+        Integer size = req.get("size") != null ? (Integer) req.get("size") : 6;
+        int topK = recommendationService.getAllJobPostsCount();
+        List<Integer> allowedIds = new ArrayList<>();
+        List<Integer> recommendedIds = recommendationService.getRecommendedIds(query, topK, null, allowedIds);
+        int from = Math.min(page * size, recommendedIds.size());
+        int to = Math.min(from + size, recommendedIds.size());
+        List<Integer> pageIds = recommendedIds.subList(from, to);
+        List<JobPost> posts = recommendationService.getJobPostsByIds(pageIds);
+        List<JobPostResponseDTO> paged = posts.stream().map(jobPostMapper::toResponseDTO).toList();
+        RecommendationResponseDTO resp = new RecommendationResponseDTO();
+        resp.setJobs(paged);
+        resp.setPage(page);
+        resp.setSize(size);
+        resp.setTotal(recommendedIds.size());
+        return resp;
+    }
+
+    @GetMapping("/simple")
+    @Operation(
+        summary = "Get simple job recommendations by query (no filters)",
+        description = "Returns job recommendations based only on the search query, without any filters. Results are paginated. This endpoint is intended for the simplest search scenario: just a query, no tags, no job types, no advanced filters.",
+        parameters = {
+            @Parameter(name = "query", description = "Search query (e.g., 'Java developer')", required = true, example = "Java developer"),
+            @Parameter(name = "page", description = "Page number (zero-based, default 0)", required = false, example = "0"),
+            @Parameter(name = "size", description = "Page size (default 6)", required = false, example = "6")
+        },
+        responses = {
+            @ApiResponse(
+                responseCode = "200",
+                description = "List of recommended jobs",
+                content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = devtitans.antoshchuk.devfusion2025backend.dto.response.RecommendationResponseDTO.class),
+                    examples = @ExampleObject(
+                        value = """
+                        {
+                          \"jobs\": [
+                            {
+                              \"id\": 1,
+                              \"title\": \"Senior Java Developer\",
+                              \"titleEn\": \"Senior Java Developer\",
+                              \"description\": \"We are looking for an experienced Java developer...\",
+                              \"descriptionEn\": \"We are looking for an experienced Java developer...\",
+                              \"location\": \"London, UK\",
+                              \"salaryRange\": \"$80,000 - $120,000\",
+                              \"employmentType\": \"Full-time\",
+                              \"experienceLevel\": \"Senior\",
+                              \"requiredExperience\": {\"id\":3,\"experience\":\"3-5 years\"},
+                              \"tags\": [{\"id\":1,\"name\":\"Java\"}],
+                              \"skills\": [{\"id\":1,\"name\":\"Java\",\"level\":3}],
+                              \"language\": \"English\",
+                              \"company\": {\"id\":1,\"name\":\"Tech Solutions Inc.\",\"logo\":\"https://example.com/logo.png\"},
+                              \"createdAt\": \"2024-06-01T12:00:00.000+00:00\",
+                              \"isActive\": true
+                            }
+                          ],
+                          \"page\": 0,
+                          \"size\": 6,
+                          \"total\": 1
+                        }
+                        """
+                    )
+                )
+            ),
+            @ApiResponse(
+                responseCode = "400",
+                description = "Invalid request or parameters"
+            ),
+            @ApiResponse(
+                responseCode = "500",
+                description = "Internal server error"
+            )
+        }
+    )
+    public RecommendationResponseDTO simpleRecommendGet(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "6") Integer size
+    ) {
+        int topK = 1000;
+        List<Integer> allowedIds = new ArrayList<>();
+        List<Integer> recommendedIds = recommendationService.getRecommendedIds(query, topK, null, allowedIds);
+        int from = Math.min(page * size, recommendedIds.size());
+        int to = Math.min(from + size, recommendedIds.size());
+        List<Integer> pageIds = recommendedIds.subList(from, to);
+        List<JobPost> posts = recommendationService.getJobPostsByIds(pageIds);
+        List<JobPostResponseDTO> paged = posts.stream().map(jobPostMapper::toResponseDTO).toList();
+        RecommendationResponseDTO resp = new RecommendationResponseDTO();
+        resp.setJobs(paged);
+        resp.setPage(page);
+        resp.setSize(size);
+        resp.setTotal(recommendedIds.size());
+        return resp;
+    }
+
+    @PostMapping("/filtered")
+    public RecommendationResponseDTO filteredRecommend(@RequestBody FilteredRecommendRequest req) {
+        System.out.println("Received FilteredRecommendRequest: " + req);
+        boolean noFilters = (req.getJobTypeIds() == null || req.getJobTypeIds().isEmpty()) &&
+                            (req.getGradationIds() == null || req.getGradationIds().isEmpty()) &&
+                            (req.getTagIds() == null || req.getTagIds().isEmpty());
+
+        if (noFilters) {
+            RecommendationResponseDTO resp = new RecommendationResponseDTO();
+            resp.setJobs(List.of());
+            resp.setPage(req.getPage() != null ? req.getPage() : 0);
+            resp.setSize(req.getSize() != null ? req.getSize() : 6);
+            resp.setTotal(0);
+            return resp;
+        }
+        List<Integer> allowedIds = recommendationService.getJobPostRepository().findIdsByJobTypeAndGradationAndTags(
+            req.getJobTypeIds(), req.getGradationIds(), req.getTagIds()
+        );
+        if (allowedIds == null || allowedIds.isEmpty()) {
+            RecommendationResponseDTO resp = new RecommendationResponseDTO();
+            resp.setJobs(List.of());
+            resp.setPage(req.getPage() != null ? req.getPage() : 0);
+            resp.setSize(req.getSize() != null ? req.getSize() : 6);
+            resp.setTotal(0);
+            return resp;
+        }
+        int topK = allowedIds.size();
+        String safeQuery = req.getQuery() != null ? req.getQuery() : "";
+        List<Integer> recommendedIds = recommendationService.getRecommendedIds(safeQuery, topK, 0.5, allowedIds);
+        int page = req.getPage() != null && req.getPage() >= 0 ? req.getPage() : 0;
+        int size = req.getSize() != null && req.getSize() > 0 ? req.getSize() : 6;
+        int from = Math.min(page * size, recommendedIds.size());
+        int to = Math.min(from + size, recommendedIds.size());
+        List<Integer> pageIds = recommendedIds.subList(from, to);
+        List<JobPost> posts = recommendationService.getJobPostsByIds(pageIds);
+        List<JobPostResponseDTO> paged = posts.stream().map(jobPostMapper::toResponseDTO).toList();
+        RecommendationResponseDTO resp = new RecommendationResponseDTO();
+        resp.setJobs(paged);
+        resp.setPage(page);
+        resp.setSize(size);
+        resp.setTotal(recommendedIds.size());
         return resp;
     }
 } 

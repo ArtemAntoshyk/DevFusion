@@ -19,11 +19,11 @@ public class RecommendationService {
     private final JobPostRepository jobPostRepository;
     private final JobPostMapper jobPostMapper;
     private final RestTemplate restTemplate = new RestTemplate();
-    private static final String RECOMMEND_URL = "https://7ef6-31-144-33-250.ngrok-free.app/recommend";
+    private static final String RECOMMEND_URL = "https://b7a2-2a01-cb01-3033-7f6b-3519-4c7c-c161-c360.ngrok-free.app/recommend";
 
     public List<Integer> getRecommendedIds(String query, Integer topK, Double threshold, List<Integer> allowedIds) {
         Map<String, Object> body = new HashMap<>();
-        body.put("query", query);
+        body.put("query", query != null ? query : "");
         if (topK != null) body.put("top_k", topK);
         if (threshold != null) body.put("threshold", threshold);
         if (allowedIds != null) body.put("allowed_ids", allowedIds);
@@ -41,7 +41,9 @@ public class RecommendationService {
 
     public List<JobPost> getJobPostsByIds(List<Integer> ids) {
         if (ids == null || ids.isEmpty()) return Collections.emptyList();
-        List<JobPost> posts = jobPostRepository.findAllById(ids);
+        System.out.println("ids: " + ids);
+        List<JobPost> posts = jobPostRepository.findAllWithDetailsByIdIn(ids);
+        System.out.println("executed");
         // Сохраняем порядок
         Map<Integer, JobPost> postMap = posts.stream().collect(Collectors.toMap(JobPost::getId, jp -> jp));
         return ids.stream().map(postMap::get).filter(Objects::nonNull).collect(Collectors.toList());
@@ -62,5 +64,9 @@ public class RecommendationService {
 
     public int getAllJobPostsCount() {
         return (int) jobPostRepository.count();
+    }
+
+    public JobPostRepository getJobPostRepository() {
+        return jobPostRepository;
     }
 } 
