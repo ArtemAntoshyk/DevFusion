@@ -8,9 +8,11 @@ import devtitans.antoshchuk.devfusion2025backend.models.user.UserAccount;
 import devtitans.antoshchuk.devfusion2025backend.models.user.SeekerSkillSet;
 import devtitans.antoshchuk.devfusion2025backend.models.user.EducationDetail;
 import devtitans.antoshchuk.devfusion2025backend.models.user.ExperienceDetail;
+import devtitans.antoshchuk.devfusion2025backend.models.user.CertificateDegree;
 import devtitans.antoshchuk.devfusion2025backend.repositories.SeekerRepository;
 import devtitans.antoshchuk.devfusion2025backend.repositories.UserAccountRepository;
 import devtitans.antoshchuk.devfusion2025backend.repositories.SkillRepository;
+import devtitans.antoshchuk.devfusion2025backend.repositories.CertificateDegreeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.io.IOException;
 import java.util.UUID;
+import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +32,7 @@ public class SeekerProfileService {
     private final SeekerRepository seekerRepository;
     private final UserAccountRepository userAccountRepository;
     private final SkillRepository skillRepository;
+    private final CertificateDegreeRepository certificateDegreeRepository;
     @Autowired
     private AmazonS3 amazonS3;
     @Autowired
@@ -117,6 +123,10 @@ public class SeekerProfileService {
             for (var eduDto : dto.getEducation()) {
                 var edu = new EducationDetail();
                 edu.setSeeker(seeker);
+                if (eduDto.getCertificateDegreeId() != null) {
+                    CertificateDegree degree = certificateDegreeRepository.findById(eduDto.getCertificateDegreeId()).orElse(null);
+                    edu.setCertificateDegree(degree);
+                }
                 edu.setMajor(eduDto.getMajor());
                 edu.setInstituteOrUniversityName(eduDto.getInstituteOrUniversityName());
                 edu.setStartDate(eduDto.getStartDate());
@@ -166,7 +176,12 @@ public class SeekerProfileService {
         }
         String key = "cv/" + userId + "/" + UUID.randomUUID() + ".pdf";
         amazonS3.putObject(s3BucketName, key, file.getInputStream(), null);
-        String fileUrl = amazonS3.getUrl(s3BucketName, key).toString();
+        // Генерируем pre-signed URL с Content-Disposition: inline
+        GeneratePresignedUrlRequest urlRequest = new GeneratePresignedUrlRequest(s3BucketName, key)
+                .withMethod(HttpMethod.GET)
+                .withExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7)); // 7 дней
+        urlRequest.addRequestParameter("response-content-disposition", "inline");
+        String fileUrl = amazonS3.generatePresignedUrl(urlRequest).toString();
         seeker.setCvUrl(fileUrl);
         seekerRepository.save(seeker);
         return fileUrl;

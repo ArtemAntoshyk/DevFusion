@@ -35,13 +35,13 @@ public class Seeker {
     @Column(name = "current_monthly_salary")
     private double currentMonthlySalary;
 
-    @OneToMany(mappedBy = "seeker")
+    @OneToMany(mappedBy = "seeker", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SeekerSkillSet> seekerSkillSets;
 
-    @OneToMany(mappedBy = "seeker")
+    @OneToMany(mappedBy = "seeker", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<EducationDetail> educationDetails;
 
-    @OneToMany(mappedBy = "seeker")
+    @OneToMany(mappedBy = "seeker", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExperienceDetail> experienceDetails;
 
     @OneToMany(mappedBy = "seeker")

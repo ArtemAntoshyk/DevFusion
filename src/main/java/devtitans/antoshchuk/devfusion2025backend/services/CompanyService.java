@@ -23,6 +23,9 @@ import com.amazonaws.services.s3.AmazonS3;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
 import java.io.IOException;
+import com.amazonaws.HttpMethod;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import java.util.Date;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -199,7 +202,12 @@ public class CompanyService {
             String logoKey = "company/logo/" + company.getId() + "/" + UUID.randomUUID() + "_" + logoFile.getOriginalFilename();
             try {
                 amazonS3.putObject(s3BucketName, logoKey, logoFile.getInputStream(), null);
-                String logoUrl = amazonS3.getUrl(s3BucketName, logoKey).toString();
+                // Генерируем pre-signed URL с Content-Disposition: inline
+                GeneratePresignedUrlRequest logoUrlRequest = new GeneratePresignedUrlRequest(s3BucketName, logoKey)
+                        .withMethod(HttpMethod.GET)
+                        .withExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7)); // 7 дней
+                logoUrlRequest.addRequestParameter("response-content-disposition", "inline");
+                String logoUrl = amazonS3.generatePresignedUrl(logoUrlRequest).toString();
                 company.setLogo(logoUrl);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload company logo", e);
@@ -215,7 +223,12 @@ public class CompanyService {
                     String imageKey = "company/images/" + company.getId() + "/" + UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
                     try {
                         amazonS3.putObject(s3BucketName, imageKey, imageFile.getInputStream(), null);
-                        String imageUrl = amazonS3.getUrl(s3BucketName, imageKey).toString();
+                        // Генерируем pre-signed URL с Content-Disposition: inline
+                        GeneratePresignedUrlRequest imageUrlRequest = new GeneratePresignedUrlRequest(s3BucketName, imageKey)
+                                .withMethod(HttpMethod.GET)
+                                .withExpiration(new Date(System.currentTimeMillis() + 1000L * 60 * 60 * 24 * 7)); // 7 дней
+                        imageUrlRequest.addRequestParameter("response-content-disposition", "inline");
+                        String imageUrl = amazonS3.generatePresignedUrl(imageUrlRequest).toString();
                         CompanyImage image = new CompanyImage(company, imageUrl);
                         company.addCompanyImage(image);
                     } catch (IOException e) {
