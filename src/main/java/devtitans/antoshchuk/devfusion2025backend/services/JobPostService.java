@@ -269,4 +269,16 @@ public class JobPostService {
         public boolean isHasApplied() { return hasApplied; }
         public Date getApplyDate() { return applyDate; }
     }
+
+    public long countAllJobPosts() {
+        return jobPostRepository.count();
+    }
+
+    public Page<JobPost> findJobPostsByIds(List<Integer> ids, int page, int size) {
+        List<JobPost> all = jobPostRepository.findAllById(ids);
+        int start = Math.min(page * size, all.size());
+        int end = Math.min(start + size, all.size());
+        List<JobPost> sublist = all.subList(start, end);
+        return new org.springframework.data.domain.PageImpl<>(sublist, PageRequest.of(page, size), all.size());
+    }
 }
