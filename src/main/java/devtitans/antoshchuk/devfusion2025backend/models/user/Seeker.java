@@ -52,6 +52,9 @@ public class Seeker {
     @Column(name = "cv_url", length = Integer.MAX_VALUE)
     private String cvUrl;
 
+    @Column(name = "seeker_title")
+    private String seekerTitle;
+
     public Seeker(double currentMonthlySalary, Date dateOfBirth, String lastName, String firstName) {
         this.currentMonthlySalary = currentMonthlySalary;
         this.dateOfBirth = dateOfBirth;

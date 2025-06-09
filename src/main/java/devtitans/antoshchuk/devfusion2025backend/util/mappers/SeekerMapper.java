@@ -1,6 +1,7 @@
 package devtitans.antoshchuk.devfusion2025backend.util.mappers;
 
 import devtitans.antoshchuk.devfusion2025backend.dto.request.UserSeekerRegisterRequestDTO;
+import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO;
 import devtitans.antoshchuk.devfusion2025backend.models.job.JobPost;
 import devtitans.antoshchuk.devfusion2025backend.models.user.Seeker;
 import org.modelmapper.ModelMapper;
@@ -31,6 +32,10 @@ public class SeekerMapper {
     public UserSeekerRegisterRequestDTO seekerToSeekerResponseDTO(Seeker seeker) {
         UserSeekerRegisterRequestDTO seekerWithPostsResponseDTO = modelMapper.map(seeker, UserSeekerRegisterRequestDTO.class);
         return seekerWithPostsResponseDTO;
+    }
+
+    public SeekerProfileResponseDTO toProfileResponseDTO(Seeker seeker) {
+        return modelMapper.map(seeker, SeekerProfileResponseDTO.class);
     }
 
 }
