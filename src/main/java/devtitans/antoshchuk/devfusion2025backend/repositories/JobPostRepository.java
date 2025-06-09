@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
 
@@ -19,4 +20,21 @@ public interface JobPostRepository extends JpaRepository<JobPost, Integer>, JpaS
 
     @Query("SELECT DISTINCT j.id FROM JobPost j JOIN j.tags t WHERE (:tagIds IS NULL OR t.id IN :tagIds)")
     List<Integer> findIdsByTagIds(@Param("tagIds") List<Integer> tagIds);
+
+    @EntityGraph(attributePaths = {"company", "jobType", "jobGradation", "experience", "tags", "jobPostSkillSets", "jobPostSkillSets.skill"})
+    List<JobPost> findAllWithDetailsByIdIn(List<Integer> ids);
+
+    @Query("""
+        SELECT DISTINCT jp.id
+        FROM JobPost jp
+        JOIN jp.tags t
+        WHERE (:jobTypeIds IS NULL OR jp.jobType.id IN :jobTypeIds)
+          AND (:gradationIds IS NULL OR jp.jobGradation.id IN :gradationIds)
+          AND (:tagIds IS NULL OR t.id IN :tagIds)
+    """)
+    List<Integer> findIdsByJobTypeAndGradationAndTags(
+        @Param("jobTypeIds") List<Integer> jobTypeIds,
+        @Param("gradationIds") List<Integer> gradationIds,
+        @Param("tagIds") List<Integer> tagIds
+    );
 } 

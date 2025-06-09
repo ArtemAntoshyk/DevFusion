@@ -31,7 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             (path.startsWith("/api/v1/companies")) ||
             (path.startsWith("/api/v1/job-posts")) ||
             (path.startsWith("/api/v1/statistics/companies")) ||
-            path.equals("/api/v1/recommend");
+            path.startsWith("/api/v1/recommend");
 
         String token = jwtTokenProvider.resolveToken(request);
         System.out.println("[JwtAuthenticationFilter] path=" + path + ", isPublic=" + isPublic + ", token=" + (token != null));
@@ -60,6 +60,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Передаю оригинальный request дальше по цепочке фильтров, чтобы тело запроса не терялось
         filterChain.doFilter(request, response);
     }
 }
