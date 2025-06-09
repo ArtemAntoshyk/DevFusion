@@ -53,6 +53,7 @@ import devtitans.antoshchuk.devfusion2025backend.dto.response.StandardResponseDT
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/v1/job-posts")
@@ -688,15 +689,39 @@ public class JobPostController {
         // Получаем справочные сущности по id
         JobType jobType = jobTypeRepository.findById(request.getJobTypeId())
                 .orElse(null);
-        if (jobType == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Job type not found", "data", null));
+        if (jobType == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Job type not found");
+            error.put("data", null);
+            return ResponseEntity.badRequest().body(error);
+        }
         JobGradation gradation = jobGradationRepository.findById(request.getJobGradationId())
                 .orElse(null);
-        if (gradation == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Job gradation not found", "data", null));
+        if (gradation == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Job gradation not found");
+            error.put("data", null);
+            return ResponseEntity.badRequest().body(error);
+        }
         RequiredExperience experience = requiredExperienceRepository.findById(request.getRequiredExperienceId())
                 .orElse(null);
-        if (experience == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Required experience not found", "data", null));
+        if (experience == null) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Required experience not found");
+            error.put("data", null);
+            return ResponseEntity.badRequest().body(error);
+        }
         List<Tag> tags = tagRepository.findAllById(request.getTagIds());
-        if (tags.size() != request.getTagIds().size()) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Some tags not found", "data", null));
+        if (tags.size() != request.getTagIds().size()) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Some tags not found");
+            error.put("data", null);
+            return ResponseEntity.badRequest().body(error);
+        }
         // Создаём JobPost
         JobPost jobPost = new JobPost();
         jobPost.setTitle(request.getTitle());
@@ -718,18 +743,26 @@ public class JobPostController {
         // Привязываем скиллы
         for (JobPostSkillDTO skillDTO : request.getSkills()) {
             Skill skill = skillRepository.findById(skillDTO.getId()).orElse(null);
-            if (skill == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Skill not found: " + skillDTO.getId(), "data", null));
+            if (skill == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("message", "Skill not found: " + skillDTO.getId());
+                error.put("data", null);
+                return ResponseEntity.badRequest().body(error);
+            }
             JobPostSkill jobPostSkill = new JobPostSkill();
             jobPostSkill.setJobPost(jobPost);
             jobPostSkill.setSkill(skill);
             jobPostSkill.setSkillLevel(skillDTO.getLevel());
             jobPostSkillRepository.save(jobPostSkill);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-            "success", true,
-            "message", "Job post created",
-            "data", Map.of("id", jobPost.getId())
-        ));
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", jobPost.getId());
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Job post created");
+        response.put("data", data);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(
