@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/recommendations")
@@ -34,7 +35,7 @@ public class RecommendationController {
     private final JobPostMapper jobPostMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${recommendation.service.url:https://094a-2a01-cb01-3001-96a9-b140-d63-5c19-7360.ngrok-free.app}")
+    @Value("${recommendation.service.url:https://094a-2a01-cb01-3001-96a9-b140-d63-5c19-7360.ngrok-free.app/recommend}")
     private String recommendationServiceUrl;
 
     @Operation(
@@ -87,17 +88,28 @@ public class RecommendationController {
             recommendedIds = Collections.emptyList();
         }
 
-        // Пагинированно выбираем вакансии по id
-        Page<JobPost> jobsPage = jobPostService.findJobPostsByIds(recommendedIds, page, size);
-        List<JobPostResponseDTO> jobs = jobsPage.getContent().stream()
+        // Получаем все вакансии по id, которые реально есть в БД
+        final List<Integer> recommendedIdsFinal = recommendedIds;
+        List<JobPost> allJobPosts = jobPostService.getJobPosts().stream()
+                .filter(jp -> recommendedIdsFinal.contains(jp.getId()))
+                .collect(Collectors.toList());
+        Map<Integer, JobPost> jobPostMap = allJobPosts.stream().collect(Collectors.toMap(JobPost::getId, jp -> jp));
+        // Собираем id, которые реально есть в БД, в правильном порядке
+        List<Integer> existingIds = recommendedIdsFinal.stream()
+                .filter(jobPostMap::containsKey)
+                .collect(Collectors.toList());
+        // Пагинируем по существующим id
+        List<JobPostResponseDTO> jobs = existingIds.stream()
+                .skip((long) page * size)
+                .limit(size)
+                .map(jobPostMap::get)
                 .map(jobPostMapper::toResponseDTO)
                 .collect(Collectors.toList());
-
         RecommendationResponseDTO result = new RecommendationResponseDTO();
         result.setJobs(jobs);
         result.setPage(page);
         result.setSize(size);
-        result.setTotal(recommendedIds.size());
+        result.setTotal(existingIds.size());
         return ResponseEntity.ok(result);
     }
 
@@ -150,6 +162,7 @@ public class RecommendationController {
                 .filter(jp -> (skillIds.isEmpty() || jp.getJobPostSkillSets().stream().anyMatch(s -> skillIds.contains(s.getSkill().getId()))))
                 .toList();
         List<Integer> allowedIds = filtered.stream().map(JobPost::getId).toList();
+        System.out.println(allowedIds);
 
         long totalJobs = jobPostService.countAllJobPosts();
         // Формируем запрос к внешнему сервису
@@ -161,19 +174,33 @@ public class RecommendationController {
         );
         // Получаем список id вакансий от рекомендательной системы
         List<Integer> recommendedIds = restTemplate.postForObject(recommendationServiceUrl, recommendRequest, List.class);
+        System.out.println(recommendedIds);
+
         if (recommendedIds == null) {
             recommendedIds = Collections.emptyList();
         }
-        // Пагинированно выбираем вакансии по id
-        Page<JobPost> jobsPage = jobPostService.findJobPostsByIds(recommendedIds, page, size);
-        List<JobPostResponseDTO> jobs = jobsPage.getContent().stream()
+        // Получаем все вакансии по id, которые реально есть в БД
+        final List<Integer> recommendedIdsFinal2 = recommendedIds;
+        List<JobPost> allJobPosts = jobPostService.getJobPosts().stream()
+                .filter(jp -> recommendedIdsFinal2.contains(jp.getId()))
+                .collect(Collectors.toList());
+        Map<Integer, JobPost> jobPostMap = allJobPosts.stream().collect(Collectors.toMap(JobPost::getId, jp -> jp));
+        // Собираем id, которые реально есть в БД, в правильном порядке
+        List<Integer> existingIds = recommendedIdsFinal2.stream()
+                .filter(jobPostMap::containsKey)
+                .collect(Collectors.toList());
+        // Пагинируем по существующим id
+        List<JobPostResponseDTO> jobs = existingIds.stream()
+                .skip((long) page * size)
+                .limit(size)
+                .map(jobPostMap::get)
                 .map(jobPostMapper::toResponseDTO)
                 .collect(Collectors.toList());
         RecommendationResponseDTO result = new RecommendationResponseDTO();
         result.setJobs(jobs);
         result.setPage(page);
         result.setSize(size);
-        result.setTotal(recommendedIds.size());
+        result.setTotal(existingIds.size());
         return ResponseEntity.ok(result);
     }
 
@@ -218,15 +245,27 @@ public class RecommendationController {
         if (recommendedIds == null) {
             recommendedIds = Collections.emptyList();
         }
-        Page<JobPost> jobsPage = jobPostService.findJobPostsByIds(recommendedIds, 0, 3);
-        List<JobPostResponseDTO> jobs = jobsPage.getContent().stream()
+        // Получаем все вакансии по id, которые реально есть в БД
+        final List<Integer> recommendedIdsFinal3 = recommendedIds;
+        List<JobPost> allJobPosts = jobPostService.getJobPosts().stream()
+                .filter(jp -> recommendedIdsFinal3.contains(jp.getId()))
+                .collect(Collectors.toList());
+        Map<Integer, JobPost> jobPostMap = allJobPosts.stream().collect(Collectors.toMap(JobPost::getId, jp -> jp));
+        // Собираем id, которые реально есть в БД, в правильном порядке
+        List<Integer> existingIds = recommendedIdsFinal3.stream()
+                .filter(jobPostMap::containsKey)
+                .skip(1)
+                .limit(3)
+                .collect(Collectors.toList());
+        List<JobPostResponseDTO> jobs = existingIds.stream()
+                .map(jobPostMap::get)
                 .map(jobPostMapper::toResponseDTO)
                 .collect(Collectors.toList());
         RecommendationResponseDTO result = new RecommendationResponseDTO();
         result.setJobs(jobs);
         result.setPage(0);
         result.setSize(3);
-        result.setTotal(recommendedIds.size());
+        result.setTotal(existingIds.size());
         return ResponseEntity.ok(result);
     }
 } 
