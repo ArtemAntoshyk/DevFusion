@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.SeekerSkillSetDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.EducationDetailDTO;
 import devtitans.antoshchuk.devfusion2025backend.dto.response.SeekerProfileResponseDTO.ExperienceDetailDTO;
+import java.text.SimpleDateFormat;
 
 @Service
 @RequiredArgsConstructor
@@ -83,6 +84,7 @@ public class SeekerProfileService {
     }
 
     private SeekerProfileResponseDTO mapToResponseDTO(Seeker seeker) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         SeekerProfileResponseDTO dto = new SeekerProfileResponseDTO();
         dto.setId(seeker.getId());
         dto.setFirstName(seeker.getFirstName());
@@ -105,16 +107,16 @@ public class SeekerProfileService {
                 edu.getCertificateDegree() != null ? edu.getCertificateDegree().getId() : null,
                 edu.getMajor(),
                 edu.getInstituteOrUniversityName(),
-                edu.getStartDate() != null ? edu.getStartDate().toString() : null,
-                edu.getCompletionDate() != null ? edu.getCompletionDate().toString() : null,
+                edu.getStartDate() != null ? dateFormat.format(edu.getStartDate()) : null,
+                edu.getCompletionDate() != null ? dateFormat.format(edu.getCompletionDate()) : null,
                 edu.getCgpa()
             )).collect(Collectors.toList()));
         // experience
         dto.setExperience(seeker.getExperienceDetails() == null ? null : seeker.getExperienceDetails().stream()
             .map(exp -> new ExperienceDetailDTO(
                 exp.isCurrentJob(),
-                exp.getStartDate() != null ? exp.getStartDate().toString() : null,
-                exp.getEndDate() != null ? exp.getEndDate().toString() : null,
+                exp.getStartDate() != null ? dateFormat.format(exp.getStartDate()) : null,
+                exp.getEndDate() != null ? dateFormat.format(exp.getEndDate()) : null,
                 exp.getJobTitle(),
                 exp.getCompanyName(),
                 exp.getJobLocationCity(),
@@ -173,7 +175,9 @@ public class SeekerProfileService {
                 edu.setInstituteOrUniversityName(eduDto.getInstituteOrUniversityName());
                 edu.setStartDate(eduDto.getStartDate());
                 edu.setCompletionDate(eduDto.getCompletionDate());
-                edu.setCgpa(eduDto.getCgpa() != null ? eduDto.getCgpa() : 0);
+                if (eduDto.getCgpa() != null) {
+                    edu.setCgpa(eduDto.getCgpa());
+                }
                 seeker.getEducationDetails().add(edu);
             }
         }
