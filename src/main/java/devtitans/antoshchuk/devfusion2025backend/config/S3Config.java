@@ -13,9 +13,9 @@ import org.springframework.context.annotation.Configuration;
 public class S3Config {
     @Bean
     public AmazonS3 amazonS3(
-            @Value("${some}") String accessKey,
-            @Value("${some}") String secretKey,
-            @Value("${some}") String region
+            @Value("${aws.s3.access-key}") String accessKey,
+            @Value("${aws.s3.secret-key}") String secretKey,
+            @Value("${aws.s3.region}") String region
 
     ) {
         BasicAWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
@@ -26,7 +26,7 @@ public class S3Config {
     }
 
     @Bean
-    public String s3BucketName(@Value("${some}") String bucketName) {
+    public String s3BucketName(@Value("${aws.s3.bucket}") String bucketName) {
         return bucketName;
     }
 } 
