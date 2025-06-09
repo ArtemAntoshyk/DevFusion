@@ -4,12 +4,16 @@ import devtitans.antoshchuk.devfusion2025backend.models.user.EducationDetail;
 import devtitans.antoshchuk.devfusion2025backend.models.user.ExperienceDetail;
 import devtitans.antoshchuk.devfusion2025backend.models.user.SeekerSkillSet;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "Seeker profile response data")
 public class SeekerProfileResponseDTO {
 
@@ -37,46 +41,45 @@ public class SeekerProfileResponseDTO {
     @Schema(description = "Contact number", example = "+380501234567")
     private String contactNumber;
 
-    @Schema(description = "List of skills", example = """
-        [
-            {
-                "skillName": "Java",
-                "proficiencyLevel": "EXPERT"
-            },
-            {
-                "skillName": "Spring",
-                "proficiencyLevel": "ADVANCED"
-            }
-        ]
-        """)
-    private List<SeekerSkillSet> skills;
+    @Schema(description = "List of skills")
+    private List<SeekerSkillDTO> skills;
 
-    @Schema(description = "List of education details", example = """
-        [
-            {
-                "degree": "Bachelor's",
-                "major": "Computer Science",
-                "institution": "University of Kyiv",
-                "startDate": "2010-09-01",
-                "endDate": "2014-06-30"
-            }
-        ]
-        """)
-    private List<EducationDetail> education;
+    @Schema(description = "List of education details")
+    private List<EducationDTO> education;
 
-    @Schema(description = "List of experience details", example = """
-        [
-            {
-                "jobTitle": "Senior Java Developer",
-                "companyName": "Tech Solutions",
-                "startDate": "2018-01-01",
-                "endDate": "2023-12-31",
-                "description": "Led development of enterprise applications"
-            }
-        ]
-        """)
-    private List<ExperienceDetail> experience;
+    @Schema(description = "List of experience details")
+    private List<ExperienceDTO> experience;
 
     @Schema(description = "Registration date", example = "2024-01-01T00:00:00")
     private Date registrationDate;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SeekerSkillDTO {
+        private String skillName;
+        private String proficiencyLevel;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EducationDTO {
+        private String degree;
+        private String major;
+        private String institution;
+        private String startDate;
+        private String endDate;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ExperienceDTO {
+        private String jobTitle;
+        private String companyName;
+        private String startDate;
+        private String endDate;
+        private String description;
+    }
 } 

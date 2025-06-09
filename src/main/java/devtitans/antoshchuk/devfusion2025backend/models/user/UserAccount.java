@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.Date;
 
@@ -38,9 +39,11 @@ public class UserAccount {
     @Temporal(TemporalType.DATE)
     private Date registrationDate;
     @OneToOne(mappedBy = "userAccount")
+    @JsonIgnore
     private Seeker seeker;
 
     @OneToOne(mappedBy = "user")
+    @JsonIgnore
     private Company company;
 
     public UserAccount(UserType userType,  String email, String password, String contactNumber, String userImage, boolean active, boolean emailNotificationActive, Date registrationDate) {
